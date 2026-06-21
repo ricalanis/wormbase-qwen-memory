@@ -206,6 +206,47 @@ class DataOpsMemoryAgent:
             if e.payload.get("id") == kpi_id
         ]
 
+    def answer(self, kpi_id: str) -> dict[str, Any]:
+        """Receipts-backed answer: prose + the exact ledger entries it cites.
+
+        The prose is refused (``grounded=False``) unless every data number in it
+        appears in a cited entry — a deterministic chain-of-custody check, not an
+        LLM judge. This is 'memory you can verify' made queryable.
+        """
+        computed = [e for e in self.ledger.fetch("kpi.computed")
+                    if e.payload.get("id") == kpi_id]
+        if not computed:
+            return {"prose": f"No memory of KPI '{kpi_id}'.",
+                    "receipts": [], "grounded": True}
+        last = computed[-1]
+
+        def _receipt(e: Any, value: Any) -> dict[str, Any]:
+            return {"seq": e.seq, "kind": e.kind,
+                    "hash": e.hash.hex()[:16], "value": value}
+
+        receipts = [_receipt(last, last.payload["value"])]
+        insights = [e for e in self.ledger.fetch("insight.generated")
+                    if e.payload.get("id") == kpi_id]
+        if insights:
+            ins = insights[-1]
+            prose = ins.payload["narrative"]
+            nums = [last.payload["value"], ins.payload["baseline"], ins.payload["new"]]
+            receipts.append(_receipt(ins, ins.payload["new"]))
+            expl = [e for e in self.ledger.fetch("kpi.explained")
+                    if e.payload.get("id") == kpi_id]
+            if expl:
+                ex = expl[-1]
+                receipts.append(_receipt(ex, ex.payload["total_change"]))
+                nums += [d["delta"] for d in ex.payload["drivers"]]
+                nums.append(ex.payload["total_change"])
+            allowed = narrative.allowed_numbers(*nums)
+        else:
+            prose = f"{kpi_id} is currently {narrative._g(last.payload['value'])}."
+            allowed = narrative.allowed_numbers(last.payload["value"])
+
+        return {"prose": prose, "receipts": receipts,
+                "grounded": narrative.is_grounded(prose, allowed)}
+
     def reproducibility_rate(self) -> float:
         """Fraction of (id, input_hash) pairs whose value_hash is consistent."""
         seen: dict[tuple, str] = {}
