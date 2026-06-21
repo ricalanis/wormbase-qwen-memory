@@ -1,0 +1,7 @@
+region,product,amount
+NORTH,Widget,100
+  north,Widget,100
+south ,Gadget,200
+South,Gadget,200
+West ,Gadget,150
+west,Gadget,150
