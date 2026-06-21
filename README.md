@@ -66,10 +66,14 @@ worker, and only genuinely novel data escalates to Qwen-Plus — the
 orchestrator-worker cascade.
 
 ```bash
-ollama pull qwen3:1.7b
 export WBM_USE_LOCAL_QWEN=1
+export OLLAMA_MODEL=qwen3:1.7b            # or any model you already have pulled
 uv run python scripts/triage_demo.py     # shows exact / gray-zone / escalate decisions
 ```
+
+Runs fully on local hardware — no API spend. The cascade is also the **cost
+strategy**: local-first, escalate to Qwen-Plus only when genuinely novel, so
+DashScope usage stays inside the free quota.
 
 Without it, the triage gray zone falls back to a deterministic similarity
 threshold, so everything still runs.

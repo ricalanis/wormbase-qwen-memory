@@ -46,6 +46,7 @@ class QwenCloudClient:
         base_url: str | None = None,
     ) -> None:
         self.model = model
+        self.backend_label = "dashscope"
         self.api_key = api_key or os.environ.get("DASHSCOPE_API_KEY")
         self.base_url = (
             base_url
@@ -83,20 +84,27 @@ class QwenCloudClient:
         resp = self._client.chat.completions.create(**kwargs)
         text = resp.choices[0].message.content or ""
         tokens = int(getattr(resp.usage, "total_tokens", 0) or 0)
-        return ChatResult(text=text, tokens=tokens, backend=f"dashscope:{self.model}")
+        return ChatResult(text=text, tokens=tokens,
+                          backend=f"{self.backend_label}:{self.model}")
 
 
 class LocalQwenClient(QwenCloudClient):
-    """A small Qwen served locally (Ollama OpenAI-compatible). The triage worker."""
+    """A small model served locally (Ollama OpenAI-compatible). The triage worker.
 
-    def __init__(self, model: str = "qwen3:1.7b") -> None:
+    Zero-cost: runs entirely on local hardware. The model is configurable via
+    ``OLLAMA_MODEL`` so you can use whatever you already have pulled (a vanilla
+    small Qwen, MiniCPM, your own fine-tune, etc.) — no GPU bill, no API spend.
+    """
+
+    def __init__(self, model: str | None = None) -> None:
         base = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434/v1")
         # Ollama ignores the key but the SDK requires a non-empty one.
         super().__init__(
-            model=model,
+            model=model or os.environ.get("OLLAMA_MODEL", "qwen3:1.7b"),
             api_key=os.environ.get("OLLAMA_API_KEY", "ollama"),
             base_url=base,
         )
+        self.backend_label = "local"
         self._enabled = os.environ.get("WBM_USE_LOCAL_QWEN") == "1"
 
     @property
