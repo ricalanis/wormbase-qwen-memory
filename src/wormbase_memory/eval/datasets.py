@@ -42,6 +42,28 @@ def _messy(sales: list[tuple], dirt: int) -> list[tuple]:
     return rows
 
 
+def make_noisy_run(n_sessions: int = 8, drift_at: tuple[int, ...] = (5,)) -> list[Session]:
+    """Stable sessions carry small deterministic noise (~±8%); drift sessions jump
+    ~+50%. A too-sensitive drift threshold false-alarms on the noise, a too-loose
+    one misses the drift — so there's a real optimum to tune toward.
+    """
+    # alternating West amount -> stable total alternates 750 / 810 (~8% swing)
+    wiggle = [0, 60, 0, 60, 0, 60, 0, 60]
+    sessions: list[Session] = []
+    for i in range(1, n_sessions + 1):
+        is_drift = i in drift_at
+        sales = [("North", "Widget", 100), ("South", "Gadget", 200),
+                 ("East", "Widget", 300), ("West", "Gadget", 150 + wiggle[(i - 1) % 8])]
+        rows = _messy(sales, dirt=2 if i == 1 else (i % 2) + 1)
+        if is_drift:
+            rows.append(("East", "Widget", 380))  # ~+50% on a 750 base
+        sessions.append(
+            Session(name=f"s{i}{'*drift' if is_drift else ''}",
+                    df=pd.DataFrame(rows, columns=COLS), is_drift=is_drift)
+        )
+    return sessions
+
+
 def make_run(n_sessions: int = 6, drift_at: tuple[int, ...] = (4,)) -> list[Session]:
     """n_sessions, with drift injected at the given 1-based session indices."""
     sessions: list[Session] = []

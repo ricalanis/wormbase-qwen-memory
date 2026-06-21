@@ -13,6 +13,7 @@ dependencies = [
 
 [project.optional-dependencies]
 ui = ["streamlit>=1.36", "plotly>=5.20"]
+viz = ["matplotlib>=3.7"]
 dev = ["pytest>=8.0"]
 
 [project.scripts]

@@ -26,8 +26,11 @@ def _prf(tp: int, fp: int, fn: int) -> dict[str, float]:
     return {"precision": round(prec, 4), "recall": round(rec, 4), "f1": round(f1, 4)}
 
 
-def run_once(sessions: list[Session]) -> dict[str, Any]:
+def run_once(sessions: list[Session],
+             drift_threshold: float | None = None) -> dict[str, Any]:
     agent = DataOpsMemoryAgent()
+    if drift_threshold is not None:
+        agent.set_preference("drift_threshold", drift_threshold)
     rows, would_be, actual = [], 0, 0
     tp = fp = fn = 0
     for i, s in enumerate(sessions):
