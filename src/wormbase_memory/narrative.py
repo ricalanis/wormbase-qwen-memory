@@ -21,7 +21,8 @@ def _g(x: float) -> str:
 
 
 def render_change_narrative(
-    kpi_id: str, baseline: float, new: float, explanation: dict[str, Any]
+    kpi_id: str, baseline: float, new: float, explanation: dict[str, Any],
+    style: str = "verbose",
 ) -> str:
     pct = (new - baseline) / abs(baseline) if baseline else float("inf")
     top = explanation["drivers"][0]
@@ -31,7 +32,7 @@ def render_change_narrative(
         f"({_g(top['delta'])}, {top['pct_of_change']:+.0%} of the move).",
     ]
     others = explanation["drivers"][1:3]
-    if others:
+    if others and style != "terse":  # terse style: headline + top driver only
         parts.append(
             "Also: "
             + ", ".join(f"{d['value']} ({_g(d['delta'])})" for d in others)

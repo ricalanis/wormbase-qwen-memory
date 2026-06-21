@@ -12,17 +12,18 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 import pandas as pd
 
-from . import analysis, executor, narrative, profiler, recall
+from . import analysis, executor, narrative, preferences, profiler, recall
 from .ledger import Ledger
 from .planner import Planner
 from .triage import Triage
 
-DRIFT_REL_THRESHOLD = 0.15  # >15% relative move flags drift
+DRIFT_REL_THRESHOLD = 0.15  # >15% relative move flags drift (default; pref can override)
+STALENESS_DAYS = 30          # plans older than this are auto-deprecated on recall
 
 
 @dataclass
@@ -43,10 +44,30 @@ class SessionReport:
 
 class DataOpsMemoryAgent:
     def __init__(self, ledger: Ledger | None = None, planner: Planner | None = None,
-                 triage: Triage | None = None):
+                 triage: Triage | None = None, staleness_days: int = STALENESS_DAYS):
         self.ledger = ledger or Ledger()
         self.planner = planner or Planner()
         self.triage = triage or Triage()
+        self.staleness_days = staleness_days
+
+    # -- memory governance ---------------------------------------------------
+
+    def set_preference(self, key: str, value: Any, ts: datetime | None = None) -> None:
+        """Remember a user preference (supersede-on-conflict, auditable)."""
+        prev = preferences.current(self.ledger).get(key)
+        if prev is not None and prev != value:
+            self.ledger.append("pref.superseded",
+                               {"key": key, "old_value": prev, "new_value": value},
+                               ts=ts)
+        self.ledger.append("pref.set", {"key": key, "value": value}, ts=ts)
+
+    def deprecate_plan(self, plan_id: str, reason: str,
+                       superseded_by: str | None = None,
+                       ts: datetime | None = None) -> None:
+        """Tombstone a plan — excluded from recall, but still in history (replayable)."""
+        self.ledger.append("plan.deprecated",
+                           {"plan_id": plan_id, "reason": reason,
+                            "superseded_by": superseded_by}, ts=ts)
 
     def _baseline_kpi_entry(self, kpi_id: str) -> dict | None:
         """Last accepted-normal computed entry for a KPI — ignores prior
@@ -62,9 +83,20 @@ class DataOpsMemoryAgent:
         self, df: pd.DataFrame, dataset: str, ts: datetime | None = None
     ) -> SessionReport:
         prof = profiler.profile(df)
+        eff_ts = ts or datetime.now(UTC)
+        prefs = preferences.current(self.ledger)
+        drift_threshold = float(prefs.get("drift_threshold", DRIFT_REL_THRESHOLD))
 
         # --- recall + triage: reuse a prior plan or escalate to author one ---
         candidate = recall.best_candidate(self.ledger, prof)
+        # decay: a stale plan is tombstoned and re-authored (timely forgetting)
+        if candidate is not None and candidate.created:
+            age_days = (eff_ts - datetime.fromisoformat(candidate.created)).days
+            if age_days > self.staleness_days:
+                self.deprecate_plan(candidate.plan_id,
+                                    reason=f"stale ({age_days}d > {self.staleness_days}d)",
+                                    ts=ts)
+                candidate = None  # force re-author
         decision = self.triage.decide(prof, candidate)
         self.ledger.append(
             "triage.decided",
@@ -95,7 +127,8 @@ class DataOpsMemoryAgent:
                 "plan.authored",
                 {"plan_id": plan_id, "fingerprint": prof["fingerprint"],
                  "column_names": prof["column_names"], "ops": ops,
-                 "backend": backend, "cost_units": cost, "dataset": dataset},
+                 "backend": backend, "cost_units": cost,
+                 "created": eff_ts.isoformat(), "dataset": dataset},
                 ts=ts,
             )
             reused = False
@@ -129,7 +162,7 @@ class DataOpsMemoryAgent:
             is_drift = False
             if baseline is not None and baseline != 0:
                 rel = abs(res["value"] - baseline) / abs(baseline)
-                if rel > DRIFT_REL_THRESHOLD:
+                if rel > drift_threshold:
                     is_drift = True
                     self.ledger.append(
                         "kpi.drift_flagged",
@@ -142,7 +175,8 @@ class DataOpsMemoryAgent:
                         base_entry.get("breakdown", {}), breakdown)
                     if expl:
                         narr = narrative.render_change_narrative(
-                            res["id"], baseline, res["value"], expl)
+                            res["id"], baseline, res["value"], expl,
+                            style=prefs.get("narrative_style", "verbose"))
                         self.ledger.append(
                             "kpi.explained",
                             {"id": res["id"], "dim": expl["dim"],
