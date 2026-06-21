@@ -16,12 +16,10 @@ is available, so tests and the offline demo always run.
 
 from __future__ import annotations
 
-import json
-import re
 from dataclasses import dataclass
 from typing import Any
 
-from .inference import LocalQwenClient
+from .inference import LocalQwenClient, loads_lenient
 from .recall import Match
 
 # In the gray zone with no local model, reuse iff column-set similarity >= this.
@@ -44,16 +42,6 @@ class Decision:
     tokens: int
     reason: str
     candidate: Match | None
-
-
-def _loads_lenient(text: str) -> dict[str, Any]:
-    try:
-        return json.loads(text)
-    except Exception:
-        m = re.search(r"\{.*\}", text, re.DOTALL)
-        if m:
-            return json.loads(m.group(0))
-        raise
 
 
 class Triage:
@@ -91,7 +79,7 @@ class Triage:
             temperature=0.0, max_tokens=128,
             response_format={"type": "json_object"},
         )
-        data = _loads_lenient(res.text)
+        data = loads_lenient(res.text)
         return Decision(
             reuse=bool(data.get("reuse")),
             similarity=candidate.similarity,

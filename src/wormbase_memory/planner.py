@@ -16,7 +16,7 @@ import json
 from typing import Any
 
 from . import executor
-from .inference import QwenCloudClient
+from .inference import QwenCloudClient, loads_lenient, resolve_planner_client
 
 SYSTEM_PROMPT = (
     "You are a data-cleaning planner. Given a column profile, output ONLY a JSON "
@@ -94,13 +94,14 @@ def _estimate_cost_units(profile: dict[str, Any]) -> int:
 
 
 class Planner:
-    def __init__(self, qwen: QwenCloudClient | None = None) -> None:
-        self.qwen = qwen or QwenCloudClient()
+    def __init__(self, client: QwenCloudClient | None = None) -> None:
+        # cloud (Qwen-Plus) or local (Ollama) — same code, chosen by WBM_PROVIDER
+        self.client = client if client is not None else resolve_planner_client()
 
     def author(self, profile: dict[str, Any]) -> dict[str, Any]:
-        if self.qwen.available:
+        if self.client is not None:
             try:
-                return self._author_with_qwen(profile)
+                return self._author_with_client(profile)
             except Exception:
                 pass  # fall through to deterministic rules
         ops = _rule_based_plan(profile)
@@ -108,16 +109,17 @@ class Planner:
         return {"ops": ops, "backend": "rules",
                 "cost_units": _estimate_cost_units(profile)}
 
-    def _author_with_qwen(self, profile: dict[str, Any]) -> dict[str, Any]:
+    def _author_with_client(self, profile: dict[str, Any]) -> dict[str, Any]:
         msg = [
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": "Column profile:\n" + json.dumps(profile)},
         ]
-        res = self.qwen.chat(
-            msg, temperature=0.0,
-            response_format={"type": "json_object"},
-        )
-        data = json.loads(res.text)
-        ops = data["ops"] if isinstance(data, dict) else data
+        # JSON mode only on DashScope; local Ollama relies on prompt + lenient parse
+        rf = ({"type": "json_object"}
+              if getattr(self.client, "backend_label", "") == "dashscope" else None)
+        res = self.client.chat(msg, temperature=0.0, max_tokens=1024,
+                               response_format=rf)
+        data = loads_lenient(res.text)
+        ops = data.get("ops", data) if isinstance(data, dict) else data
         executor.validate_plan(ops)
         return {"ops": ops, "backend": res.backend, "cost_units": res.tokens}

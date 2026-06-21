@@ -40,6 +40,19 @@
 - 19 tests green (6 new triage tests using a fake local client — no network).
   Enable real worker: `ollama pull qwen3:1.7b && export WBM_USE_LOCAL_QWEN=1`.
 
+## 2026-06-21 — provider switch (local-now / cloud-later) + submission map
+- Added `WBM_PROVIDER` planner switch (`resolve_planner_client`): auto / dashscope
+  / rules / local — same code, one env var. Cloud path == local path, only env
+  differs. Triage gate (`WBM_USE_LOCAL_QWEN`) decoupled from planner provider.
+- Confirmed: small local models (MiniCPM3-4B) are unreliable at structured plan
+  authoring (malformed ops) → local planner auto-falls back to rules. Design:
+  planner = Qwen-Plus (cloud) / rules (local); local small model = triage only
+  (which it does reliably). Shared `loads_lenient` parser.
+- `OLLAMA_MODEL` documented; `.env.example` updated with provider modes.
+- Added `SUBMISSION.md`: requirements checklist + text description + run modes +
+  Alibaba Cloud deployment-proof plan (pending Qwen Cloud credit validation).
+- 19 tests green; local triage verified $0 on MiniCPM3-4B.
+
 ### Next
 - P1 finish: live DashScope smoke test once key is set; route planning to Qwen-Plus.
 - P3: deploy to ECS + record proof. P4: polish UI.

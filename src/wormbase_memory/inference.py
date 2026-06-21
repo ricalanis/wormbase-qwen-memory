@@ -13,7 +13,9 @@ the offline demo always run.
 
 from __future__ import annotations
 
+import json
 import os
+import re
 from dataclasses import dataclass
 from typing import Any
 
@@ -109,4 +111,41 @@ class LocalQwenClient(QwenCloudClient):
 
     @property
     def available(self) -> bool:
+        # triage worker is gated independently of the planner provider switch
         return self._enabled and super().available
+
+
+def loads_lenient(text: str) -> Any:
+    """Parse JSON from a model reply, tolerating prose around the object."""
+    try:
+        return json.loads(text)
+    except Exception:
+        m = re.search(r"\{.*\}", text, re.DOTALL)
+        if m:
+            return json.loads(m.group(0))
+        raise
+
+
+def resolve_planner_client() -> QwenCloudClient | None:
+    """Pick the planner backend from ``WBM_PROVIDER`` (one switch, identical code).
+
+    dashscope|cloud|qwen -> Qwen-Plus on Alibaba Cloud (needs DASHSCOPE_API_KEY)
+    rules                -> None (deterministic rule-based planner; reliable, $0)
+    local                -> local model via Ollama (EXPERIMENTAL: small models are
+                            unreliable at structured plan authoring; auto-falls back
+                            to rules on malformed output)
+    auto (default)       -> cloud if a key is present, else rules
+    """
+    provider = os.environ.get("WBM_PROVIDER", "auto").lower()
+    model = os.environ.get("QWEN_PLANNER_MODEL", "qwen-plus")
+    if provider == "rules":
+        return None
+    if provider in ("dashscope", "cloud", "qwen"):
+        c = QwenCloudClient(model=model)
+        return c if c.available else None
+    if provider == "local":
+        c = LocalQwenClient()
+        return c if c._client is not None else None
+    # auto: cloud when a key exists, otherwise deterministic rules
+    cloud = QwenCloudClient(model=model)
+    return cloud if cloud.available else None
