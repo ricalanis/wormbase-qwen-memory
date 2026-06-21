@@ -110,6 +110,17 @@
   `WBM_PROVIDER=dashscope` → Qwen-Plus on Alibaba Cloud (same code).
 - 35 offline tests green; UI boots in cloud mode.
 
+## 2026-06-21 — Ollama Cloud model choice + 3-week dry run
+- Evaluated qwen3.5:397b as planner: it's a heavy REASONING model — burns 15k+
+  reasoning tokens deliberating about JSON and truncates before emitting content
+  (empty `content`, answer stuck in `reasoning`). Unsuitable for direct
+  structured output. Default stays **qwen3-coder:480b** (emits valid plan-JSON in
+  ~640 tokens; 3.5 kept selectable via OLLAMA_CLOUD_MODEL).
+- Full 3-week dry run (WBM_PROVIDER=ollama_cloud, qwen3-coder:480b): Week 1
+  AUTHORED by the cloud Qwen (~2s), Weeks 2–3 REUSED free (0.0s), drift detected
+  + explained, reproducibility 100%, chain GREEN, receipts grounded. Total ~2s —
+  only Week 1 hits the cloud; reuse covers the rest. Video-ready timing.
+
 ### Next
 - Extend ops: forecast / regression / cohort_retention / what_if (modelling tier).
 - LLM narration (Qwen-Plus) gated by `is_grounded`; full `compose_report`.

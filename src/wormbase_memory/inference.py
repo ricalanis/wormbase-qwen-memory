@@ -140,6 +140,8 @@ class OllamaCloudClient(QwenCloudClient):
 
     def __init__(self, model: str | None = None) -> None:
         super().__init__(
+            # qwen3-coder emits structured plan-JSON directly; qwen3.5 is a heavy
+            # reasoning model that truncates before answering — wrong tool here.
             model=model or os.environ.get("OLLAMA_CLOUD_MODEL", "qwen3-coder:480b"),
             api_key=_ollama_cloud_key(),
             base_url=OLLAMA_CLOUD_BASE,
