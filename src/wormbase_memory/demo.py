@@ -55,9 +55,9 @@ def sessions() -> list[tuple[str, pd.DataFrame, datetime]]:
         ("East", "Widget", 2000),       # the new whale
     ])
     return [
-        ("session-1 (new data)", s1, t0),
-        ("session-2 (same shape)", s2, t0 + timedelta(days=1)),
-        ("session-3 (drift)", s3, t0 + timedelta(days=2)),
+        ("Week 1 · first Monday", s1, t0),
+        ("Week 2 · same shape", s2, t0 + timedelta(days=7)),
+        ("Week 3 · new customer", s3, t0 + timedelta(days=14)),
     ]
 
 

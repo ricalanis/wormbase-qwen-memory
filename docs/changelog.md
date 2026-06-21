@@ -85,6 +85,18 @@
 - New ledger kinds: pref.set/superseded, plan.deprecated, policy.tuned.
 - 35 tests green (+13). `docs/benchmarks.md` added.
 
+## 2026-06-21 — demo-experience sprint (marketer + product + UX)
+- 5-lens sprint → `docs/demo-spec.md` (persona, message hierarchy, video script,
+  thumbnail, blog angle, shooting checklist).
+- Rebuilt `ui/app.py`: audit-grade dark theme (`.streamlit/config.toml` + CSS),
+  single-column guided scroll, answer-first headline + trust strip, sessions gated
+  behind "Run Week N" (live arc), revenue-over-time with drift annotation,
+  attribution **waterfall** (Σ=ΔKPI), grounded receipts with hash-chip popovers,
+  cost-per-week economics, **prove-it/tamper** chain rows + verify badge,
+  time-travel replay. Fixed waterfall to bind to total_amount (was grabbing
+  row_count). Booted headless (HTTP 200, no errors); bindings validated.
+- Brewly persona reskin of demo session labels (Week 1/2/3). 35 tests green.
+
 ### Next
 - Extend ops: forecast / regression / cohort_retention / what_if (modelling tier).
 - LLM narration (Qwen-Plus) gated by `is_grounded`; full `compose_report`.
