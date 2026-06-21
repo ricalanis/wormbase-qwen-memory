@@ -53,7 +53,26 @@
   Alibaba Cloud deployment-proof plan (pending Qwen Cloud credit validation).
 - 19 tests green; local triage verified $0 on MiniCPM3-4B.
 
+## 2026-06-21 — analyst pivot: explain WHY a KPI moved (keystone slice)
+- arXiv research (5-thread fan-out) → `docs/research-analyst.md`: pipeline stages,
+  op vocab, the keystone (causal attribution of metric change), eval (InsightBench
+  2407.06423, CORGI 2510.07309), and the chain-of-custody faithfulness idea.
+- New deterministic analyst layer wired onto existing drift detection:
+  - `executor.kpi_breakdown` — per-dimension breakdown stored in `kpi.computed`.
+  - `analysis.explain_change` — attributes ΔKPI to driving segments; contributions
+    sum exactly to the change (efficiency axiom).
+  - `narrative.render_change_narrative` + `is_grounded` — grounded prose; every
+    data number must trace to the ledger (deterministic faithfulness check).
+  - agent: on drift, writes `kpi.explained` + `insight.generated` and reports the
+    narrative. Demo now prints "total_amount changed +444% … driver region=East
+    (+100%)". UI shows an Explained-insights panel.
+- README/ARCHITECTURE reframed: data-ops → business-analyst MemoryAgent.
+- 22 tests green (3 new analyst tests incl. efficiency axiom + faithfulness).
+
 ### Next
+- Extend ops: forecast / regression / cohort_retention / what_if (modelling tier).
+- LLM narration (Qwen-Plus) gated by `is_grounded`; full `compose_report`.
+- Wire InsightBench eval against DashScope when credits land.
 - P1 finish: live DashScope smoke test once key is set; route planning to Qwen-Plus.
 - P3: deploy to ECS + record proof. P4: polish UI.
 - P5 finish: wire InfiAgent-DABench + Raha scorers; run LongMemEval/PrefEval with key.

@@ -118,6 +118,34 @@ def input_hash(df: pd.DataFrame) -> str:
     return content_hash({"columns": list(map(str, df.columns)), "rows": sorted(rows)})
 
 
+def kpi_breakdown(
+    df: pd.DataFrame, kpi: dict[str, Any], dim_cols: list[str]
+) -> dict[str, dict[str, float]]:
+    """Per-dimension breakdown of an additive KPI, stored alongside its value.
+
+    For additive aggregations (sum/count/nunique) each dimension partitions the
+    metric, so diffing two sessions' breakdowns explains a KPI change exactly
+    (contributions sum to ΔKPI). Computed from the ledger-resident table — no raw
+    data needs to be retained to later explain a move.
+    """
+    col, agg = kpi["column"], kpi["agg"]
+    out: dict[str, dict[str, float]] = {}
+    for d in dim_cols:
+        if d not in df or d == col:
+            continue
+        if agg == "sum":
+            g = df.groupby(d)[col].apply(
+                lambda s: float(pd.to_numeric(s, errors="coerce").sum()))
+        elif agg == "count":
+            g = df.groupby(d)[col].size().astype(float)
+        elif agg == "nunique":
+            g = df.groupby(d)[col].nunique().astype(float)
+        else:
+            continue  # mean/min/max are not additively decomposable
+        out[str(d)] = {str(k): float(v) for k, v in g.items()}
+    return out
+
+
 def compute_kpi(df: pd.DataFrame, kpi: dict[str, Any]) -> dict[str, Any]:
     """Compute a single KPI deterministically. Returns value + reproducibility hashes."""
     work = df

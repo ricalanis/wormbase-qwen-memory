@@ -56,12 +56,15 @@ reproduces the KPI byte-for-byte; that is the whole reason KPIs stay stable.
 | `planner.py` | Authors a plan from a profile — Qwen-Plus (DashScope) or deterministic rules |
 | `recall.py` | Finds the best reusable prior plan by fingerprint / column-set similarity |
 | `triage.py` | Local-Qwen worker: reuse-vs-escalate verdict for gray-zone candidates |
+| `analysis.py` | Deterministic metric-change attribution (Σ contributions = ΔKPI) |
+| `narrative.py` | Grounded narration + `is_grounded` chain-of-custody faithfulness check |
 | `inference.py` | DashScope (Qwen-Plus) + local-Qwen OpenAI-compatible clients |
 | `agent.py` | The loop: profile → recall → PEVR execute → KPI → drift-check → ledger |
 
 ## Memory model (ledger entry kinds)
 
 `triage.decided` · `plan.authored` · `plan.reused` · `clean.{propose,execute,verify,resolve}` ·
+`kpi.explained` · `insight.generated` ·
 `kpi.defined` · `kpi.computed` (carries `value_hash` + `input_hash`) ·
 `kpi.drift_flagged` · `plan.deprecated` / `kpi.deprecated` (tombstones = timely
 forgetting; excluded on `replay_until`).

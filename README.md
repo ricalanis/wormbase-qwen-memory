@@ -1,9 +1,10 @@
 # WormBase Qwen Memory
 
-**A data-operations MemoryAgent whose memory is a hash-chained ledger — so its
-KPIs are reproducible byte-for-byte across sessions, it reuses prior operation
-plans to get cheaper and more consistent over time, and it flags drift instead
-of silently changing answers.**
+**A business-analyst MemoryAgent whose memory is a hash-chained ledger — so its
+KPIs are reproducible byte-for-byte across sessions, it reuses prior analysis
+plans to get cheaper over time, and when a metric moves it doesn't just flag it:
+it explains *why* (attributes the change to the driving segment) and communicates
+it in prose where every number traces back to the ledger.**
 
 Built for the **Global AI Hackathon with Qwen Cloud** · **Track 1: MemoryAgent**.
 
@@ -87,8 +88,10 @@ threshold, so everything still runs.
 | `plan.reused` | A prior plan recalled and reused (with similarity + provenance) |
 | `clean.{propose,execute,verify,resolve}` | PEVR cycle for a data-op execution |
 | `kpi.defined` | A KPI definition (formula, source columns) |
-| `kpi.computed` | A KPI value with `value_hash` + `input_hash` (reproducibility unit) |
+| `kpi.computed` | A KPI value with `value_hash` + `input_hash` + per-dim `breakdown` |
 | `kpi.drift_flagged` | A KPI moved beyond threshold — flagged, **not** silently changed |
+| `kpi.explained` | Attribution of the move to driving segments (Σ contributions = ΔKPI) |
+| `insight.generated` | Grounded narrative of the change (every number cites the ledger) |
 | `plan.deprecated` / `kpi.deprecated` | Tombstone: timely forgetting, excluded on replay |
 
 ## Evaluation

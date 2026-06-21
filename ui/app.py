@@ -59,9 +59,16 @@ with left:
     if drift:
         st.warning(
             "⚠ Drift flagged (not silently applied): "
-            + ", ".join(f"{d['id']} {d['prev']}→{d['new']} ({d['rel_change']:+.0%})"
+            + ", ".join(f"{d['id']} {d['baseline']}→{d['new']} ({d['rel_change']:+.0%})"
                         for d in drift)
         )
+    insights = [e.payload for e in agent.ledger.fetch("insight.generated")]
+    if insights:
+        st.subheader("Explained insights (why it moved)")
+        for p in insights:
+            st.markdown(f"- {p['narrative']}")
+        st.caption("Every number traces to a ledger entry — narrative is "
+                   "deterministically grounded, not an LLM guess.")
 
 with right:
     st.subheader("Memory recall + triage")

@@ -71,6 +71,8 @@ def run(agent: DataOpsMemoryAgent | None = None) -> DataOpsMemoryAgent:
             f"{name:26s} | plan={tag:18s} cost={r.planner_cost_units:4d} "
             f"| rows {r.rows_in}->{r.rows_out} | KPIs={r.kpis}{drift}"
         )
+        for narr in r.explanations:  # analyst layer: explain WHY it moved
+            print(f"    ↳ {narr}")
 
     # Reproducibility: re-ingest session-1's exact data; value_hash must match.
     s1_name, s1_df, s1_ts = sessions()[0]

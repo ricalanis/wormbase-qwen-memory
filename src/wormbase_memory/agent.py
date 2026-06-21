@@ -17,7 +17,7 @@ from typing import Any
 
 import pandas as pd
 
-from . import executor, profiler, recall
+from . import analysis, executor, narrative, profiler, recall
 from .ledger import Ledger
 from .planner import Planner
 from .triage import Triage
@@ -37,6 +37,7 @@ class SessionReport:
     triage_tokens: int = 0
     kpis: dict[str, float] = field(default_factory=dict)
     drift: list[str] = field(default_factory=list)
+    explanations: list[str] = field(default_factory=list)
     verified: bool = True
 
 
@@ -47,14 +48,15 @@ class DataOpsMemoryAgent:
         self.planner = planner or Planner()
         self.triage = triage or Triage()
 
-    def _baseline_kpi_value(self, kpi_id: str) -> float | None:
-        """Last accepted-normal value for a KPI — ignores prior drift-flagged
-        readings so a one-off anomaly never becomes the new reference."""
-        baseline = None
+    def _baseline_kpi_entry(self, kpi_id: str) -> dict | None:
+        """Last accepted-normal computed entry for a KPI — ignores prior
+        drift-flagged readings so a one-off anomaly never becomes the new
+        reference. Carries the breakdown used to explain the next move."""
+        entry = None
         for e in self.ledger.fetch("kpi.computed"):
             if e.payload.get("id") == kpi_id and not e.payload.get("drift"):
-                baseline = e.payload.get("value")
-        return baseline
+                entry = e.payload
+        return entry
 
     def ingest(
         self, df: pd.DataFrame, dataset: str, ts: datetime | None = None
@@ -114,13 +116,16 @@ class DataOpsMemoryAgent:
             triage_backend=decision.backend, triage_tokens=decision.tokens,
         )
 
-        # --- compute KPIs + drift check -------------------------------------
+        # --- compute KPIs -> on drift, EXPLAIN the move + narrate -----------
+        cat_dims = [c for c, m in prof["columns"].items() if m.get("is_categorical")]
         for kdef in executor.kpi_defs(ops):
             res = executor.compute_kpi(cleaned_df, kdef)
+            breakdown = executor.kpi_breakdown(cleaned_df, kdef, cat_dims)
             self.ledger.append("kpi.defined",
                                {"id": kdef["id"], "agg": kdef["agg"],
                                 "column": kdef["column"]}, ts=ts)
-            baseline = self._baseline_kpi_value(res["id"])
+            base_entry = self._baseline_kpi_entry(res["id"])
+            baseline = base_entry["value"] if base_entry else None
             is_drift = False
             if baseline is not None and baseline != 0:
                 rel = abs(res["value"] - baseline) / abs(baseline)
@@ -133,9 +138,26 @@ class DataOpsMemoryAgent:
                         ts=ts,
                     )
                     report.drift.append(res["id"])
+                    expl = analysis.explain_change(
+                        base_entry.get("breakdown", {}), breakdown)
+                    if expl:
+                        narr = narrative.render_change_narrative(
+                            res["id"], baseline, res["value"], expl)
+                        self.ledger.append(
+                            "kpi.explained",
+                            {"id": res["id"], "dim": expl["dim"],
+                             "drivers": expl["drivers"][:5],
+                             "total_change": expl["total_change"],
+                             "dataset": dataset}, ts=ts)
+                        self.ledger.append(
+                            "insight.generated",
+                            {"id": res["id"], "narrative": narr, "dim": expl["dim"],
+                             "baseline": baseline, "new": res["value"],
+                             "dataset": dataset}, ts=ts)
+                        report.explanations.append(narr)
             self.ledger.append("kpi.computed",
                                {**res, "drift": is_drift, "baseline": baseline,
-                                "dataset": dataset}, ts=ts)
+                                "breakdown": breakdown, "dataset": dataset}, ts=ts)
             report.kpis[res["id"]] = res["value"]
 
         report.verified = self.ledger.verify()[0]
