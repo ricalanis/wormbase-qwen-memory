@@ -42,12 +42,14 @@ class DataOpsMemoryAgent:
         self.ledger = ledger or Ledger()
         self.planner = planner or Planner()
 
-    def _last_kpi_value(self, kpi_id: str) -> float | None:
-        last = None
+    def _baseline_kpi_value(self, kpi_id: str) -> float | None:
+        """Last accepted-normal value for a KPI — ignores prior drift-flagged
+        readings so a one-off anomaly never becomes the new reference."""
+        baseline = None
         for e in self.ledger.fetch("kpi.computed"):
-            if e.payload.get("id") == kpi_id:
-                last = e.payload.get("value")
-        return last
+            if e.payload.get("id") == kpi_id and not e.payload.get("drift"):
+                baseline = e.payload.get("value")
+        return baseline
 
     def ingest(
         self, df: pd.DataFrame, dataset: str, ts: datetime | None = None
@@ -101,19 +103,22 @@ class DataOpsMemoryAgent:
             self.ledger.append("kpi.defined",
                                {"id": kdef["id"], "agg": kdef["agg"],
                                 "column": kdef["column"]}, ts=ts)
-            prev = self._last_kpi_value(res["id"])
-            if prev is not None and prev != 0:
-                rel = abs(res["value"] - prev) / abs(prev)
+            baseline = self._baseline_kpi_value(res["id"])
+            is_drift = False
+            if baseline is not None and baseline != 0:
+                rel = abs(res["value"] - baseline) / abs(baseline)
                 if rel > DRIFT_REL_THRESHOLD:
+                    is_drift = True
                     self.ledger.append(
                         "kpi.drift_flagged",
-                        {"id": res["id"], "prev": prev, "new": res["value"],
+                        {"id": res["id"], "baseline": baseline, "new": res["value"],
                          "rel_change": round(rel, 4), "dataset": dataset},
                         ts=ts,
                     )
                     report.drift.append(res["id"])
             self.ledger.append("kpi.computed",
-                               {**res, "dataset": dataset}, ts=ts)
+                               {**res, "drift": is_drift, "baseline": baseline,
+                                "dataset": dataset}, ts=ts)
             report.kpis[res["id"]] = res["value"]
 
         report.verified = self.ledger.verify()[0]

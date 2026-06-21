@@ -1,0 +1,70 @@
+{
+  "n_sessions": 6,
+  "reproducibility_rate": 1.0,
+  "plan_reuse_rate": 1.0,
+  "planner_cost_reduction": 0.8279,
+  "planner_cost_units_actual": 185,
+  "planner_cost_units_would_be": 1075,
+  "drift": {
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+  },
+  "hash_chain_ok": true,
+  "ledger_entries": 56,
+  "rows": [
+    {
+      "session": "s1",
+      "reused": false,
+      "cost": 185,
+      "total_amount": 750.0,
+      "drift_flagged": false,
+      "is_drift": false
+    },
+    {
+      "session": "s2",
+      "reused": true,
+      "cost": 0,
+      "total_amount": 750.0,
+      "drift_flagged": false,
+      "is_drift": false
+    },
+    {
+      "session": "s3",
+      "reused": true,
+      "cost": 0,
+      "total_amount": 750.0,
+      "drift_flagged": false,
+      "is_drift": false
+    },
+    {
+      "session": "s4*drift",
+      "reused": true,
+      "cost": 0,
+      "total_amount": 5750.0,
+      "drift_flagged": true,
+      "is_drift": true
+    },
+    {
+      "session": "s5",
+      "reused": true,
+      "cost": 0,
+      "total_amount": 750.0,
+      "drift_flagged": false,
+      "is_drift": false
+    },
+    {
+      "session": "s6",
+      "reused": true,
+      "cost": 0,
+      "total_amount": 750.0,
+      "drift_flagged": false,
+      "is_drift": false
+    }
+  ],
+  "stability": {
+    "runs": 5,
+    "all_identical": true,
+    "distinct_sequences": 1
+  }
+}
