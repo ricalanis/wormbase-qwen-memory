@@ -76,6 +76,21 @@ Runs fully on local hardware — no API spend. The cascade is also the **cost
 strategy**: local-first, escalate to Qwen-Plus only when genuinely novel, so
 DashScope usage stays inside the free quota.
 
+### Run the whole demo on a real Qwen — locally, via Ollama Cloud
+
+For a fully-working local demo where a real Qwen authors the plans (the small
+local models can't emit valid plan-JSON; a flagship cloud Qwen can):
+
+```bash
+WBM_PROVIDER=ollama_cloud uv run --extra ui streamlit run ui/app.py
+# planner = qwen3-coder:480b on Ollama Cloud (key auto-read from the OpenCode
+# auth store, or set OLLAMA_API_KEY). Switch model with OLLAMA_CLOUD_MODEL=qwen3.5:397b
+```
+
+Plans are authored once (one cloud call) then **reused for free**, so only the
+first week is slow. For the official submission set `WBM_PROVIDER=dashscope` to run
+Qwen-Plus on **Alibaba Cloud** — same code.
+
 Without it, the triage gray zone falls back to a deterministic similarity
 threshold, so everything still runs.
 

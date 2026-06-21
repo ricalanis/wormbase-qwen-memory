@@ -19,13 +19,25 @@ from . import executor
 from .inference import QwenCloudClient, loads_lenient, resolve_planner_client
 
 SYSTEM_PROMPT = (
-    "You are a data-cleaning planner. Given a column profile, output ONLY a JSON "
-    "object {\"ops\": [...]} using this closed vocabulary: "
-    "strip_whitespace{columns}, lowercase{column}, titlecase{column}, "
-    "canonicalize{column,mapping}, fillna{column,value}, drop_null_rows{columns}, "
-    "dedup{subset?}, filter{column,op,value}, "
-    "define_kpi{id,agg,column,filter?} with agg in [sum,mean,count,nunique,min,max]. "
-    "Do not invent ops. Prefer canonicalize for near-duplicate categorical values."
+    "You are a data-cleaning planner. Read the column profile and output ONLY a "
+    'JSON object: {"ops": [ ... ]}. Each element of "ops" MUST be a JSON OBJECT '
+    'with an "op" field — never a string. Allowed ops and their exact fields:\n'
+    '  {"op":"strip_whitespace","columns":["..."]}\n'
+    '  {"op":"lowercase","column":"..."}\n'
+    '  {"op":"titlecase","column":"..."}\n'
+    '  {"op":"canonicalize","column":"...","mapping":{"variant":"canonical"}}\n'
+    '  {"op":"fillna","column":"...","value":0}\n'
+    '  {"op":"drop_null_rows","columns":["..."]}\n'
+    '  {"op":"dedup","subset":null}\n'
+    '  {"op":"define_kpi","id":"...","agg":"sum","column":"..."}  '
+    "(agg in [sum,mean,count,nunique,min,max])\n"
+    "Example:\n"
+    '{"ops":[{"op":"strip_whitespace","columns":["region"]},'
+    '{"op":"canonicalize","column":"region","mapping":{"na":"North America"}},'
+    '{"op":"drop_null_rows","columns":["amount"]},{"op":"dedup","subset":null},'
+    '{"op":"define_kpi","id":"total_amount","agg":"sum","column":"amount"}]}\n'
+    "Do not invent ops. Prefer canonicalize for near-duplicate categorical values. "
+    "Output JSON only, no prose."
 )
 
 REVENUE_HINTS = ("amount", "revenue", "total", "price", "sales", "value")

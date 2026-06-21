@@ -115,6 +115,38 @@ class LocalQwenClient(QwenCloudClient):
         return self._enabled and super().available
 
 
+OLLAMA_CLOUD_BASE = "https://ollama.com/v1"
+OPENCODE_AUTH = os.path.expanduser("~/.local/share/opencode/auth.json")
+
+
+def _ollama_cloud_key() -> str | None:
+    """OLLAMA_API_KEY env, else the OpenCode auth store (provider 'ollama-cloud')."""
+    k = os.environ.get("OLLAMA_API_KEY")
+    if k:
+        return k
+    try:
+        d = json.load(open(OPENCODE_AUTH))
+        e = d.get("ollama-cloud") or {}
+        return e.get("key") or e.get("apiKey")
+    except Exception:
+        return None
+
+
+class OllamaCloudClient(QwenCloudClient):
+    """A large Qwen model hosted on Ollama Cloud (https://ollama.com), driven
+    through the local toolchain. Capable enough to author structured plans (the
+    small local models can't). For DEV/DEMO; the hackathon's Alibaba-Cloud proof
+    still uses ``QwenCloudClient`` (DashScope)."""
+
+    def __init__(self, model: str | None = None) -> None:
+        super().__init__(
+            model=model or os.environ.get("OLLAMA_CLOUD_MODEL", "qwen3-coder:480b"),
+            api_key=_ollama_cloud_key(),
+            base_url=OLLAMA_CLOUD_BASE,
+        )
+        self.backend_label = "ollama-cloud"
+
+
 def loads_lenient(text: str) -> Any:
     """Parse JSON from a model reply, tolerating prose around the object."""
     try:
@@ -146,6 +178,9 @@ def resolve_planner_client() -> QwenCloudClient | None:
     if provider == "local":
         c = LocalQwenClient()
         return c if c._client is not None else None
+    if provider in ("ollama_cloud", "ollama-cloud", "cloud-ollama"):
+        c = OllamaCloudClient()
+        return c if c.available else None
     # auto: cloud when a key exists, otherwise deterministic rules
     cloud = QwenCloudClient(model=model)
     return cloud if cloud.available else None

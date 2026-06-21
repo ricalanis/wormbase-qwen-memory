@@ -15,7 +15,7 @@ import streamlit as st
 
 from wormbase_memory.agent import DataOpsMemoryAgent
 from wormbase_memory.demo import sessions
-from wormbase_memory.inference import QwenCloudClient
+from wormbase_memory.inference import resolve_planner_client
 
 st.set_page_config(page_title="WormBase Qwen Memory", layout="wide",
                    page_icon="🪱")
@@ -57,7 +57,7 @@ if "agent" not in st.session_state:
     st.session_state.step = 0
     st.session_state.tampered = False
 agent: DataOpsMemoryAgent = st.session_state.agent
-q = QwenCloudClient()
+planner_client = resolve_planner_client()
 
 
 def _money(v) -> str:
@@ -123,7 +123,7 @@ c1.markdown(f'<span class="badge {"ok" if ok else "broken"}">'
             unsafe_allow_html=True)
 c2.metric("Reproducible", f"{agent.reproducibility_rate():.0%}")
 c3.metric("Audit trail", len(agent.ledger.fetch()))
-c4.metric("Planner", "Qwen-Plus" if q.available else "rules (offline)")
+c4.metric("Planner", planner_client.model if planner_client else "rules (offline)")
 
 # controls
 b1, b2, _ = st.columns([1, 1, 2])

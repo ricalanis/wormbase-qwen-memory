@@ -97,6 +97,19 @@
   row_count). Booted headless (HTTP 200, no errors); bindings validated.
 - Brewly persona reskin of demo session labels (Week 1/2/3). 35 tests green.
 
+## 2026-06-21 — Ollama Cloud planner (real Qwen, locally driven, $0)
+- Added `OllamaCloudClient` + `WBM_PROVIDER=ollama_cloud`: a flagship Qwen on
+  Ollama Cloud (`qwen3-coder:480b`, OpenAI-compatible at ollama.com) authors real
+  plans through the local toolchain. Key auto-read from the OpenCode auth store
+  (provider `ollama-cloud`) or `OLLAMA_API_KEY`.
+- Fixed the planner SYSTEM_PROMPT: explicit JSON-object op schema + worked example
+  (the model had emitted DSL strings → invalid → rules fallback). Now Qwen3-Coder
+  authors a valid plan end-to-end (verified: backend `ollama-cloud:qwen3-coder:480b`,
+  chain GREEN). Plans authored once then reused free (only week 1 is slow).
+- UI planner label shows the resolved backend. Submission path unchanged:
+  `WBM_PROVIDER=dashscope` → Qwen-Plus on Alibaba Cloud (same code).
+- 35 offline tests green; UI boots in cloud mode.
+
 ### Next
 - Extend ops: forecast / regression / cohort_retention / what_if (modelling tier).
 - LLM narration (Qwen-Plus) gated by `is_grounded`; full `compose_report`.
