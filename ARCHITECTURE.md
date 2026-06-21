@@ -54,13 +54,14 @@ reproduces the KPI byte-for-byte; that is the whole reason KPIs stay stable.
 | `profiler.py` | Deterministic column profile → hashable fingerprint (the recall key) |
 | `executor.py` | Closed op vocabulary executed by pandas; `compute_kpi` with value/input hashes |
 | `planner.py` | Authors a plan from a profile — Qwen-Plus (DashScope) or deterministic rules |
-| `recall.py` | Finds a reusable prior plan by fingerprint / column-set similarity |
+| `recall.py` | Finds the best reusable prior plan by fingerprint / column-set similarity |
+| `triage.py` | Local-Qwen worker: reuse-vs-escalate verdict for gray-zone candidates |
 | `inference.py` | DashScope (Qwen-Plus) + local-Qwen OpenAI-compatible clients |
 | `agent.py` | The loop: profile → recall → PEVR execute → KPI → drift-check → ledger |
 
 ## Memory model (ledger entry kinds)
 
-`plan.authored` · `plan.reused` · `clean.{propose,execute,verify,resolve}` ·
+`triage.decided` · `plan.authored` · `plan.reused` · `clean.{propose,execute,verify,resolve}` ·
 `kpi.defined` · `kpi.computed` (carries `value_hash` + `input_hash`) ·
 `kpi.drift_flagged` · `plan.deprecated` / `kpi.deprecated` (tombstones = timely
 forgetting; excluded on `replay_until`).

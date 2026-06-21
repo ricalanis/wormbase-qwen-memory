@@ -58,10 +58,27 @@ The agent **degrades gracefully**: with no key it uses a deterministic rule-base
 planner (so the demo and tests always run); with a key it routes planning to
 Qwen-Plus and recall embeddings to Qwen.
 
+### Local triage worker (the small-Qwen cameo)
+
+A small local Qwen is the cheap recall gatekeeper: exact matches reuse for free,
+only *gray-zone* candidates (similar-but-not-identical schema) spend the local
+worker, and only genuinely novel data escalates to Qwen-Plus — the
+orchestrator-worker cascade.
+
+```bash
+ollama pull qwen3:1.7b
+export WBM_USE_LOCAL_QWEN=1
+uv run python scripts/triage_demo.py     # shows exact / gray-zone / escalate decisions
+```
+
+Without it, the triage gray zone falls back to a deterministic similarity
+threshold, so everything still runs.
+
 ## Memory model (ledger entry kinds)
 
 | Kind | Meaning |
 |---|---|
+| `triage.decided` | Reuse-vs-escalate verdict (backend: exact / local-qwen / rules) |
 | `plan.authored` | A new op-plan written by Qwen-Plus for a novel data profile |
 | `plan.reused` | A prior plan recalled and reused (with similarity + provenance) |
 | `clean.{propose,execute,verify,resolve}` | PEVR cycle for a data-op execution |

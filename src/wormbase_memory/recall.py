@@ -14,8 +14,6 @@ from typing import Any
 
 from .ledger import Ledger
 
-REUSE_THRESHOLD = 0.9
-
 
 @dataclass
 class Match:
@@ -23,6 +21,7 @@ class Match:
     ops: list[dict[str, Any]]
     similarity: float
     fingerprint: str
+    column_names: list[str]
 
 
 def _jaccard(a: set[str], b: set[str]) -> float:
@@ -31,16 +30,21 @@ def _jaccard(a: set[str], b: set[str]) -> float:
     return len(a & b) / len(a | b)
 
 
-def find(ledger: Ledger, profile: dict[str, Any]) -> Match | None:
+def best_candidate(ledger: Ledger, profile: dict[str, Any]) -> Match | None:
+    """Best reusable prior plan for this profile — no threshold applied.
+
+    Exact schema fingerprint short-circuits to similarity 1.0; otherwise the best
+    Jaccard over column sets. The reuse-vs-escalate *decision* is left to the
+    triage worker (see ``triage.py``), which is where the local Qwen earns its keep.
+    """
     best: Match | None = None
     cur_cols = set(profile["column_names"])
     for e in ledger.fetch("plan.authored"):
         p = e.payload
+        cols = p.get("column_names", [])
         if p.get("fingerprint") == profile["fingerprint"]:
-            return Match(p["plan_id"], p["ops"], 1.0, p["fingerprint"])
-        sim = _jaccard(cur_cols, set(p.get("column_names", [])))
+            return Match(p["plan_id"], p["ops"], 1.0, p["fingerprint"], cols)
+        sim = _jaccard(cur_cols, set(cols))
         if best is None or sim > best.similarity:
-            best = Match(p["plan_id"], p["ops"], sim, p.get("fingerprint", ""))
-    if best and best.similarity >= REUSE_THRESHOLD:
-        return best
-    return None
+            best = Match(p["plan_id"], p["ops"], sim, p.get("fingerprint", ""), cols)
+    return best

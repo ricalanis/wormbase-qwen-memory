@@ -30,6 +30,16 @@
   LongMemEval / PrefEval; `docs/eval.md` documents both prongs.
 - 13 tests green.
 
+## 2026-06-20 — local Qwen triage worker cameo
+- Added `triage.py` (local-Qwen reuse-vs-escalate gatekeeper, FrugalGPT-style
+  cascade) + refactored `recall.py` to `best_candidate()` (no threshold; triage
+  owns the decision). Exact match = free reuse; gray zone = local Qwen decides;
+  novel = escalate to Qwen-Plus. New `triage.decided` ledger entry (auditable).
+- Wired into agent (triage_backend/triage_tokens on report); UI recall panel now
+  shows the triage decision; `scripts/triage_demo.py` showcases it.
+- 19 tests green (6 new triage tests using a fake local client — no network).
+  Enable real worker: `ollama pull qwen3:1.7b && export WBM_USE_LOCAL_QWEN=1`.
+
 ### Next
 - P1 finish: live DashScope smoke test once key is set; route planning to Qwen-Plus.
 - P3: deploy to ECS + record proof. P4: polish UI.

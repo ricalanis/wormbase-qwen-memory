@@ -20,6 +20,7 @@ import pandas as pd
 from . import executor, profiler, recall
 from .ledger import Ledger
 from .planner import Planner
+from .triage import Triage
 
 DRIFT_REL_THRESHOLD = 0.15  # >15% relative move flags drift
 
@@ -32,15 +33,19 @@ class SessionReport:
     planner_cost_units: int
     rows_in: int
     rows_out: int
+    triage_backend: str = "none"
+    triage_tokens: int = 0
     kpis: dict[str, float] = field(default_factory=dict)
     drift: list[str] = field(default_factory=list)
     verified: bool = True
 
 
 class DataOpsMemoryAgent:
-    def __init__(self, ledger: Ledger | None = None, planner: Planner | None = None):
+    def __init__(self, ledger: Ledger | None = None, planner: Planner | None = None,
+                 triage: Triage | None = None):
         self.ledger = ledger or Ledger()
         self.planner = planner or Planner()
+        self.triage = triage or Triage()
 
     def _baseline_kpi_value(self, kpi_id: str) -> float | None:
         """Last accepted-normal value for a KPI — ignores prior drift-flagged
@@ -56,14 +61,25 @@ class DataOpsMemoryAgent:
     ) -> SessionReport:
         prof = profiler.profile(df)
 
-        # --- recall: reuse a prior plan or author a new one ------------------
-        match = recall.find(self.ledger, prof)
-        if match is not None:
-            ops = match.ops
+        # --- recall + triage: reuse a prior plan or escalate to author one ---
+        candidate = recall.best_candidate(self.ledger, prof)
+        decision = self.triage.decide(prof, candidate)
+        self.ledger.append(
+            "triage.decided",
+            {"decision": "reuse" if decision.reuse else "escalate",
+             "similarity": round(decision.similarity, 4),
+             "backend": decision.backend, "tokens": decision.tokens,
+             "reason": decision.reason, "dataset": dataset},
+            ts=ts,
+        )
+        if decision.reuse and candidate is not None:
+            ops = candidate.ops
             backend, cost = "reused", 0
             self.ledger.append(
                 "plan.reused",
-                {"plan_id": match.plan_id, "similarity": round(match.similarity, 4),
+                {"plan_id": candidate.plan_id,
+                 "similarity": round(decision.similarity, 4),
+                 "triage_backend": decision.backend,
                  "fingerprint": prof["fingerprint"], "dataset": dataset},
                 ts=ts,
             )
@@ -95,6 +111,7 @@ class DataOpsMemoryAgent:
         report = SessionReport(
             dataset=dataset, reused=reused, plan_backend=backend,
             planner_cost_units=cost, rows_in=len(df), rows_out=len(cleaned_df),
+            triage_backend=decision.backend, triage_tokens=decision.tokens,
         )
 
         # --- compute KPIs + drift check -------------------------------------

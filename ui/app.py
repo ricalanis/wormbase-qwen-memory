@@ -64,19 +64,19 @@ with left:
         )
 
 with right:
-    st.subheader("Memory recall")
+    st.subheader("Memory recall + triage")
     rows = []
-    for e in agent.ledger.fetch():
-        if e.kind == "plan.authored":
-            rows.append({"session": e.payload["dataset"], "decision": "AUTHORED",
-                         "backend": e.payload["backend"],
-                         "cost_units": e.payload["cost_units"]})
-        elif e.kind == "plan.reused":
-            rows.append({"session": e.payload["dataset"], "decision": "REUSED",
-                         "backend": f"sim={e.payload['similarity']}",
-                         "cost_units": 0})
+    for e in agent.ledger.fetch("triage.decided"):
+        p = e.payload
+        rows.append({"session": p["dataset"],
+                     "decision": p["decision"].upper(),
+                     "triage": p["backend"], "sim": p["similarity"],
+                     "worker_tokens": p["tokens"]})
     st.dataframe(pd.DataFrame(rows), hide_index=True, use_container_width=True)
-    st.caption("Reused plans cost 0 planner units — the agent gets cheaper as it remembers.")
+    st.caption(
+        "Exact matches reuse for free; only gray-zone cases spend the local Qwen "
+        "worker; novel data escalates to Qwen-Plus. Reuse costs 0 planner units."
+    )
 
 st.divider()
 st.subheader("Replay to timestamp")
