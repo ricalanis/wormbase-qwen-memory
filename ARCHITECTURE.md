@@ -58,13 +58,19 @@ reproduces the KPI byte-for-byte; that is the whole reason KPIs stay stable.
 | `triage.py` | Local-Qwen worker: reuse-vs-escalate verdict for gray-zone candidates |
 | `analysis.py` | Deterministic metric-change attribution (Σ contributions = ΔKPI) |
 | `narrative.py` | Grounded narration + `is_grounded` chain-of-custody faithfulness check |
+| `preferences.py` | User-preference memory folded from the ledger (last-writer-wins) |
+| `autoresearch.py` | Metric-governed self-improvement (PEVR loop tunes a parameter) |
+| `memory_api.py` | Read-only folds (ask/explain/verify/replay) — the MCP surface |
+| `mcp_server.py` | FastMCP server exposing memory to external AI clients |
+| `eval/curve.py` | Smarter+cheaper-over-sessions learning curve (memory ON vs OFF) |
 | `inference.py` | DashScope (Qwen-Plus) + local-Qwen OpenAI-compatible clients |
 | `agent.py` | The loop: profile → recall → PEVR execute → KPI → drift-check → ledger |
 
 ## Memory model (ledger entry kinds)
 
 `triage.decided` · `plan.authored` · `plan.reused` · `clean.{propose,execute,verify,resolve}` ·
-`kpi.explained` · `insight.generated` ·
+`kpi.explained` · `insight.generated` · `pref.set` · `pref.superseded` ·
+`plan.deprecated` · `policy.tuned` ·
 `kpi.defined` · `kpi.computed` (carries `value_hash` + `input_hash`) ·
 `kpi.drift_flagged` · `plan.deprecated` / `kpi.deprecated` (tombstones = timely
 forgetting; excluded on `replay_until`).

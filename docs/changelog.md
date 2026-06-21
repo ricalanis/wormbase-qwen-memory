@@ -69,6 +69,22 @@
 - README/ARCHITECTURE reframed: data-ops → business-analyst MemoryAgent.
 - 22 tests green (3 new analyst tests incl. efficiency axiom + faithfulness).
 
+## 2026-06-21 — product sprint build-out (Max scope)
+- 5-lens design sprint → `docs/product-sprint.md` (confirmed Devpost rubric:
+  Tech 30% [names MCP] / Innovation 30% / Impact 25% / Presentation 15%).
+  Thesis: "memory you can verify, not memory you have to trust."
+- Receipts-backed Q&A (`agent.answer`) + `scripts/prove_it.py` (identical hash
+  across runs; tamper caught) — the WOW.
+- Real forgetting: tombstones filter recall + decay (`recall`, `agent`); preference
+  memory (`preferences.py`, pref.set/superseded) wired to drift threshold + style.
+- Learning curve (`eval/curve.py`, `scripts/plot_curve.py`) memory ON vs OFF.
+- Metric-governed self-improvement (`autoresearch.py`) tunes drift threshold,
+  remembers it, writes `policy.tuned`.
+- MCP server (`mcp_server.py` + `memory_api.py` + `infra/claude_desktop_config.json`)
+  exposes memory to Claude Desktop/Cursor; `scripts/seed_ledger.py` persists a ledger.
+- New ledger kinds: pref.set/superseded, plan.deprecated, policy.tuned.
+- 35 tests green (+13). `docs/benchmarks.md` added.
+
 ### Next
 - Extend ops: forecast / regression / cohort_retention / what_if (modelling tier).
 - LLM narration (Qwen-Plus) gated by `is_grounded`; full `compose_report`.

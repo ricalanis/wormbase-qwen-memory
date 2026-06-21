@@ -79,6 +79,27 @@ DashScope usage stays inside the free quota.
 Without it, the triage gray zone falls back to a deterministic similarity
 threshold, so everything still runs.
 
+## Verify it yourself
+
+```bash
+uv run python scripts/prove_it.py              # same hash twice → tamper breaks the chain
+uv run --extra viz python scripts/plot_curve.py  # smarter+cheaper-over-sessions → results/
+```
+
+## Query the memory from other AI (MCP)
+
+The agent's memory is exposed over MCP, so Claude Desktop / Cursor can query it as
+institutional knowledge — receipts-backed answers, change explanations, and a
+chain-verify tool (all read-only folds over the ledger).
+
+```bash
+WBM_LEDGER_DB=./wbm_ledger.db uv run python scripts/seed_ledger.py        # persist a ledger
+WBM_LEDGER_DB=./wbm_ledger.db uv run --extra mcp python -m wormbase_memory.mcp_server
+```
+Tools: `ask_kpi`, `explain_change`, `verify_memory`, `list_kpis`. Resources:
+`memory://kpi/{id}/history`, `memory://ledger/verify`. See
+[`infra/claude_desktop_config.json`](infra/claude_desktop_config.json).
+
 ## Memory model (ledger entry kinds)
 
 | Kind | Meaning |
@@ -92,6 +113,9 @@ threshold, so everything still runs.
 | `kpi.drift_flagged` | A KPI moved beyond threshold — flagged, **not** silently changed |
 | `kpi.explained` | Attribution of the move to driving segments (Σ contributions = ΔKPI) |
 | `insight.generated` | Grounded narrative of the change (every number cites the ledger) |
+| `pref.set` / `pref.superseded` | Remembered user preferences (last-writer-wins, auditable) |
+| `plan.deprecated` | Tombstone — forgotten for recall, still replayable (timely forgetting) |
+| `policy.tuned` | Self-improvement: a parameter the agent tuned to raise a metric |
 | `plan.deprecated` / `kpi.deprecated` | Tombstone: timely forgetting, excluded on replay |
 
 ## Evaluation

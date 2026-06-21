@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "wormbase-memory": {
+      "command": "uv",
+      "args": [
+        "run", "--extra", "mcp",
+        "--directory", "/ABSOLUTE/PATH/TO/wormbase-qwen-memory",
+        "python", "-m", "wormbase_memory.mcp_server"
+      ],
+      "env": {
+        "WBM_LEDGER_DB": "/ABSOLUTE/PATH/TO/wormbase-qwen-memory/wbm_ledger.db"
+      }
+    }
+  }
+}
