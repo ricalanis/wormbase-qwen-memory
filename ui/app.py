@@ -134,7 +134,8 @@ play_clicked = co1.button("▶ Play simulation", type="primary", width="stretch"
 co2.button("⏭ Step a week", on_click=run_next, width="stretch",
            disabled=st.session_state.step >= NWEEKS)
 co3.button("↺ Reset", on_click=reset, width="stretch")
-speed = co4.slider("seconds per week", 0.2, 1.5, 0.6, 0.1)
+speed = co4.slider("seconds per week", 0.5, 5.0, 2.0, 0.5,
+                   help="drift weeks linger a bit longer so you can read the explanation")
 
 
 def render_window(container) -> None:
@@ -252,7 +253,9 @@ if st.session_state.playing:
     while st.session_state.step < NWEEKS:
         run_next()
         render_window(window)
-        time.sleep(speed)
+        # linger longer on drift weeks so the answer + explanation can be read
+        last_rep = st.session_state.reports[-1][1]
+        time.sleep(speed + 2.5 if last_rep.drift else speed)
     st.session_state.playing = False
     st.rerun()
 else:
