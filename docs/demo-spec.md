@@ -18,6 +18,8 @@ explained → verifiable.**
 - **Pillar 3 — explains why:** attribution where Σ(contributions) = ΔKPI; MCP
   exposes it to other AI.
 - **Soundbite (at the WOW):** *"I changed one digit — and the memory caught me."*
+- **Governance soundbite (consistency beat):** *"Different people, different words —
+  one governed query. The number means the same thing every week."*
 - **Precision guard (avoid overclaim):** we verify *reproducibility +
   tamper-evidence + grounding*, not model infallibility. Say "every number traces
   to a receipt," never "every number is right."
@@ -41,12 +43,24 @@ time-travel replay → ledger expander.
   stream into the ledger.
 - **00:35–00:50** — zoom the `prev_hash → hash` column. *"Memory here isn't a
   summary you trust — it's a hash-chained ledger."*
-- **00:50–01:05** — next week: **REUSED · 0 tokens**, cost −83%. *"It reuses the
-  plan it already made — cheaper over time, not more expensive."*
-- **01:05–01:25** — week 3: **DRIFT** +444% (450→2450), flagged not applied.
-- **01:25–01:45** — attribution waterfall; one driver = East; Σ = ΔKPI.
-- **01:45–02:05** — grounded narrative; click a number → its ledger receipt.
-- **02:05–02:20** — receipts Q&A + replay-to-timestamp.
+- **00:50–01:05** — next week: **REUSED · 0 tokens**; the token chart shows "with
+  memory" flat while "without memory" climbs. *"It reuses the plan it already made —
+  cheaper over time, not more expensive."*
+- **01:05–01:28 GOVERNANCE BEAT** — weeks fast-forward; the question card changes
+  asker + wording each week (Maya → Founder → Board: *"how'd we do?"*, *"what's the
+  top-line?"*, *"confirm the number"*) while the **same governed query**
+  (`total_amount = SUM(amount)`) stays pinned and the line stays comparable. Cut to
+  the data-governance panel for a beat. VO: *"Here's what makes it trustworthy.
+  Every week a different person asks in different words — but it always answers from
+  the same governed query. One definition of revenue, reused and auditable. So the
+  number means the same thing every week — that's data governance, not guesswork."*
+- **01:28–01:45 DRIFT** — a week spikes: **DRIFT flagged, not applied**; the
+  attribution waterfall resolves to one driver (East), Σ = ΔKPI. *"When the number
+  really moves, it doesn't hide it — it shows which lever moved it, exactly."*
+- **01:45–02:05** — grounded narrative; click a figure → its ledger receipt
+  ("grounded ✓"). *"Every number traces to a receipt. If it can't, it isn't said."*
+- **02:05–02:20** — replay-to-timestamp: scrub back; the state reconstructs from the
+  ledger alone.
 - **02:20–02:42 THE WOW** — split RUN 1 / RUN 2 → identical SHA256 → edit a stored
   value → chain cascades red. VO: *"Re-run it — same hash, every time. Change one
   stored number… and the whole chain turns red. You can't quietly rewrite the past."*

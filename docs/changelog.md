@@ -189,6 +189,14 @@
 - AppTest-verified distinct questions render per week; governance section present.
   38 tests green.
 
+## 2026-06-21 — governance beat in the video script
+- Wove a GOVERNANCE BEAT (01:05–01:28) into the 3-min script in docs/demo-spec.md:
+  weeks fast-forward, the question card changes asker+wording each week while the
+  same governed query stays pinned + cut to the governance panel. VO: "different
+  person, different words — same governed query … that's data governance, not
+  guesswork." Added a governance soundbite. Compressed attribution into the drift
+  beat to hold 3:00.
+
 ### Next
 - Extend ops: forecast / regression / cohort_retention / what_if (modelling tier).
 - LLM narration (Qwen-Plus) gated by `is_grounded`; full `compose_report`.
