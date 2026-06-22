@@ -15,8 +15,10 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
+from wormbase_memory import profiler
 from wormbase_memory.agent import DataOpsMemoryAgent
 from wormbase_memory.inference import resolve_planner_client
+from wormbase_memory.planner import _estimate_cost_units
 from wormbase_memory.simulate import simulate_weeks
 
 st.set_page_config(page_title="WormBase Qwen Memory", layout="wide", page_icon="🪱")
@@ -57,6 +59,7 @@ if "agent" not in st.session_state:
     # high staleness: weekly cadence over 12 weeks shouldn't trigger decay
     st.session_state.agent = DataOpsMemoryAgent(staleness_days=3650)
     st.session_state.reports = []
+    st.session_state.telemetry = []   # per-week tokens + plan provenance
     st.session_state.step = 0
     st.session_state.tampered = False
     st.session_state.playing = False
@@ -72,14 +75,37 @@ def run_next() -> None:
     i = st.session_state.step
     if i < NWEEKS:
         wk = SESS[i]
+        would_be = _estimate_cost_units(profiler.profile(wk["df"]))  # cost if no memory
         rep = agent.ingest(wk["df"], wk["name"], ts=wk["ts"])
         st.session_state.reports.append((wk, rep))
+        st.session_state.telemetry.append({
+            "week": wk["week"], "actual": rep.planner_cost_units,
+            "would_be": would_be, "reused": rep.reused, "backend": rep.plan_backend,
+        })
         st.session_state.step += 1
 
 
 def reset() -> None:
-    for k in ("agent", "reports", "step", "tampered", "playing"):
+    for k in ("agent", "reports", "telemetry", "step", "tampered", "playing"):
         st.session_state.pop(k, None)
+
+
+_OP_LABEL = {"strip_whitespace": "strip whitespace", "drop_null_rows": "drop null rows",
+             "dedup": "dedup rows", "canonicalize": "canonicalize",
+             "lowercase": "lowercase", "titlecase": "titlecase", "fillna": "fill nulls"}
+
+
+def _fmt_op(op: dict) -> str:
+    k = op.get("op")
+    if k == "define_kpi":
+        return f"KPI {op['id']} = {op['agg'].upper()}({op['column']})"
+    if k == "dedup":
+        return "dedup rows"
+    if "columns" in op:
+        return f"{_OP_LABEL.get(k, k)}({', '.join(op['columns'])})"
+    if "column" in op:
+        return f"{_OP_LABEL.get(k, k)}({op['column']})"
+    return k
 
 
 def tamper() -> None:
@@ -151,21 +177,60 @@ def render_window(container) -> None:
         else:
             st.info("Press **▶ Play simulation** (or **⏭ Step a week**) to begin.")
 
-        # growing revenue chart with drift markers
+        # two evolving charts: revenue (left) + token usage (right)
+        gleft, gright = st.columns(2)
         if hist:
             xs = list(range(1, len(hist) + 1))
             ys = [h["value"] for h in hist]
             colors = ["#F5A623" if h.get("drift") else "#4DA3FF" for h in hist]
             sizes = [16 if h.get("drift") else 8 for h in hist]
-            fig = go.Figure(go.Scatter(
+            rev = go.Figure(go.Scatter(
                 x=xs, y=ys, mode="lines+markers", line=dict(color="#4DA3FF", width=3),
                 marker=dict(color=colors, size=sizes, line=dict(color="#0B0F14", width=1))))
-            fig.update_layout(height=300, paper_bgcolor="#0B0F14", plot_bgcolor="#0B0F14",
-                              font_color="#E6EDF3", margin=dict(t=10, b=10),
+            rev.update_layout(height=280, paper_bgcolor="#0B0F14", plot_bgcolor="#0B0F14",
+                              font_color="#E6EDF3", margin=dict(t=28, b=10), title="revenue",
                               xaxis=dict(title="week", gridcolor="#1A2230",
                                          range=[0.5, NWEEKS + 0.5]),
-                              yaxis=dict(title="revenue", gridcolor="#1A2230"))
-            container_chart = st.plotly_chart(fig, width="stretch")
+                              yaxis=dict(gridcolor="#1A2230"))
+            gleft.plotly_chart(rev, width="stretch")
+
+        tel = st.session_state.telemetry
+        if tel:
+            wks = [t["week"] for t in tel]
+            cum_actual, cum_naive, a, n = [], [], 0, 0
+            for t in tel:
+                a += t["actual"]; n += t["would_be"]
+                cum_actual.append(a); cum_naive.append(n)
+            tok = go.Figure()
+            tok.add_trace(go.Scatter(x=wks, y=cum_naive, mode="lines", name="without memory",
+                                     line=dict(color="#FF4D4F", width=2, dash="dash")))
+            tok.add_trace(go.Scatter(x=wks, y=cum_actual, mode="lines+markers",
+                                     name="with memory", line=dict(color="#2ED47A", width=3),
+                                     fill="tozeroy", fillcolor="rgba(46,212,122,0.12)"))
+            tok.update_layout(height=280, paper_bgcolor="#0B0F14", plot_bgcolor="#0B0F14",
+                              font_color="#E6EDF3", margin=dict(t=28, b=10),
+                              title="planner tokens (cumulative)",
+                              legend=dict(orientation="h", y=1.15, font=dict(size=11)),
+                              xaxis=dict(title="week", gridcolor="#1A2230",
+                                         range=[0.5, NWEEKS + 0.5]),
+                              yaxis=dict(gridcolor="#1A2230"))
+            gright.plotly_chart(tok, width="stretch")
+            saved = cum_naive[-1] - cum_actual[-1]
+            pct = saved / cum_naive[-1] if cum_naive[-1] else 0
+            gright.caption(f"**{cum_actual[-1]:,} tokens** used vs **{cum_naive[-1]:,}** "
+                           f"if it re-planned every week — **{pct:.0%} saved** by reuse.")
+
+        # evolution of the query: the plan the agent is running this week
+        authored = agent.ledger.fetch("plan.authored")
+        if authored and tel:
+            active = authored[-1].payload
+            last = tel[-1]
+            src = ("🧠 authored this week by " + last["backend"]) if not last["reused"] \
+                else f"♻️ reused from {active['dataset']} (0 tokens)"
+            ops_txt = "\n".join("• " + _fmt_op(op) for op in active["ops"])
+            st.markdown(f"**The query the agent is running**  ·  {src}")
+            st.code(ops_txt, language=None)
+
         st.progress(st.session_state.step / NWEEKS,
                     text=f"week {st.session_state.step} / {NWEEKS}")
 

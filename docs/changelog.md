@@ -157,6 +157,17 @@
   Agent runs with high staleness so weekly cadence doesn't decay-reauthor.
 - Validated via AppTest (12 steps + tamper, zero exceptions) + live boot. 38 tests.
 
+## 2026-06-21 — token-usage chart + query evolution in the sim window
+- Animated window now shows TWO evolving charts side by side: revenue (with drift
+  markers) and **cumulative planner tokens** — "with memory" (flat after week 1)
+  vs "without memory" (re-plans every week, climbs) with a fill + a live caption
+  ("N tokens used vs M if it re-planned every week — X% saved").
+- Added **"the query the agent is running"** panel: the closed-vocab plan ops
+  rendered readably (KPI total_amount = SUM(amount), canonicalize(region), …),
+  badged 🧠 authored / ♻️ reused (0 tokens) per week — shows the query's
+  provenance evolving. Per-week telemetry captured in run_next (`_estimate_cost_units`
+  for the no-memory baseline). Validated via AppTest + live boot. 38 tests green.
+
 ### Next
 - Extend ops: forecast / regression / cohort_retention / what_if (modelling tier).
 - LLM narration (Qwen-Plus) gated by `is_grounded`; full `compose_report`.
