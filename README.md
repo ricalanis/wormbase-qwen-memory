@@ -42,10 +42,17 @@ nothing was altered.
 ## Quickstart
 
 ```bash
-uv venv && uv pip install -e ".[dev,ui]"
-uv run pytest -q                      # ledger + agent invariants, all green
-uv run python scripts/run_demo.py     # 3-session demo (offline, no key needed)
+git clone https://github.com/ricalanis/wormbase-qwen-memory && cd wormbase-qwen-memory
+make setup     # install all extras into the project venv
+make test      # ledger + agent invariants, all green
+make demo      # offline 3-session CLI demo (no key needed)
+make ui        # the Streamlit demo
 ```
+
+> **Run commands from the repo directory** (or use `make -C <repo> …` from
+> anywhere). `uv run --extra ui …` silently no-ops outside a uv project — `make`
+> bakes in `uv run --directory <repo> --extra …` so it always works. `make help`
+> lists every target. Raw equivalents below assume you're in the repo.
 
 To use Qwen Cloud, set your DashScope key and run the smoke test:
 
@@ -67,9 +74,7 @@ worker, and only genuinely novel data escalates to Qwen-Plus — the
 orchestrator-worker cascade.
 
 ```bash
-export WBM_USE_LOCAL_QWEN=1
-export OLLAMA_MODEL=qwen3:1.7b            # or any model you already have pulled
-uv run python scripts/triage_demo.py     # shows exact / gray-zone / escalate decisions
+make triage    # WBM_USE_LOCAL_QWEN=1; set OLLAMA_MODEL=… for any pulled model
 ```
 
 Runs fully on local hardware — no API spend. The cascade is also the **cost
@@ -82,9 +87,9 @@ For a fully-working local demo where a real Qwen authors the plans (the small
 local models can't emit valid plan-JSON; a flagship cloud Qwen can):
 
 ```bash
-WBM_PROVIDER=ollama_cloud uv run --extra ui streamlit run ui/app.py
-# planner = qwen3-coder:480b on Ollama Cloud (key auto-read from the OpenCode
-# auth store, or set OLLAMA_API_KEY). Switch model with OLLAMA_CLOUD_MODEL=qwen3.5:397b
+make cloud-demo   # planner = qwen3-coder:480b on Ollama Cloud
+# key auto-read from the OpenCode auth store, or set OLLAMA_API_KEY.
+# Switch model with OLLAMA_CLOUD_MODEL=qwen3.5:397b
 ```
 
 Plans are authored once (one cloud call) then **reused for free**, so only the
@@ -97,8 +102,8 @@ threshold, so everything still runs.
 ## Verify it yourself
 
 ```bash
-uv run python scripts/prove_it.py              # same hash twice → tamper breaks the chain
-uv run --extra viz python scripts/plot_curve.py  # smarter+cheaper-over-sessions → results/
+make prove     # same hash twice → tamper breaks the chain
+make curve     # smarter+cheaper-over-sessions → results/smarter_curve.png
 ```
 
 ## Query the memory from other AI (MCP)
@@ -108,8 +113,8 @@ institutional knowledge — receipts-backed answers, change explanations, and a
 chain-verify tool (all read-only folds over the ledger).
 
 ```bash
-WBM_LEDGER_DB=./wbm_ledger.db uv run python scripts/seed_ledger.py        # persist a ledger
-WBM_LEDGER_DB=./wbm_ledger.db uv run --extra mcp python -m wormbase_memory.mcp_server
+make seed      # persist a ledger to wbm_ledger.db
+make mcp       # run the MCP server (Claude Desktop / Cursor)
 ```
 Tools: `ask_kpi`, `explain_change`, `verify_memory`, `list_kpis`. Resources:
 `memory://kpi/{id}/history`, `memory://ledger/verify`. See

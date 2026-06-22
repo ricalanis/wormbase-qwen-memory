@@ -121,6 +121,15 @@
   + explained, reproducibility 100%, chain GREEN, receipts grounded. Total ~2s —
   only Week 1 hits the cloud; reuse covers the rest. Video-ready timing.
 
+## 2026-06-21 — Makefile (fix `uv run --extra` footgun)
+- `uv run --extra ui …` silently no-ops outside a uv project (warning: "--extra
+  has no effect when used outside of a project") — so commands failed when run
+  from the parent dir. Added a self-locating **Makefile**: every target uses
+  `uv run --directory <repo> --extra …`, so `make ui|demo|prove|curve|cloud-demo|
+  seed|mcp|test|setup` work from ANY cwd. README commands converted to `make`.
+- Verified from the parent dir: make demo/test/setup all green; MCP server builds
+  with fastmcp; 35 tests pass post-`uv sync`.
+
 ### Next
 - Extend ops: forecast / regression / cohort_retention / what_if (modelling tier).
 - LLM narration (Qwen-Plus) gated by `is_grounded`; full `compose_report`.
