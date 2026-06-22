@@ -34,6 +34,32 @@ def _df(rows):
     return pd.DataFrame(rows, columns=["region", "product", "amount"])
 
 
+def test_transient_spike_vs_sustained_shift():
+    """A one-off spike flags once then returns quietly; a sustained shift flags
+    once then is accepted as the new normal (re-baselined)."""
+    a = DataOpsMemoryAgent()
+
+    def rev(west):  # total = 100 + 200 + west
+        return _df([("North", "Widget", 100), ("South", "Gadget", 200),
+                    ("West", "Gadget", west)])
+
+    a.ingest(rev(150), "w1")          # baseline 450
+    r2 = a.ingest(rev(155), "w2")     # 455, ~+1% -> no drift
+    r3 = a.ingest(rev(2000), "w3-spike")   # 2300, spike -> DRIFT
+    r4 = a.ingest(rev(150), "w4-back")     # 450 again -> NOT flagged (transient)
+    assert "total_amount" in r3.drift
+    assert "total_amount" not in r4.drift
+
+    a2 = DataOpsMemoryAgent()
+    a2.ingest(rev(150), "s1")         # 450
+    s2 = a2.ingest(rev(700), "s2-shift")   # 1000, +122% -> DRIFT
+    s3 = a2.ingest(rev(705), "s3-newnormal")  # 1005, stayed -> accepted, NOT flagged
+    s4 = a2.ingest(rev(710), "s4")    # 1010 -> still fine vs new baseline
+    assert "total_amount" in s2.drift
+    assert "total_amount" not in s3.drift   # sustained shift re-baselined
+    assert "total_amount" not in s4.drift
+
+
 def test_agent_explains_drift_end_to_end():
     a = DataOpsMemoryAgent()
     base = _df([("North", "Widget", 100), ("South", "Gadget", 200),

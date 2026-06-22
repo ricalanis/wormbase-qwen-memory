@@ -69,6 +69,14 @@ class DataOpsMemoryAgent:
                            {"plan_id": plan_id, "reason": reason,
                             "superseded_by": superseded_by}, ts=ts)
 
+    def _last_kpi_entry(self, kpi_id: str) -> dict | None:
+        """Most recent computed entry for a KPI (flagged or not)."""
+        entry = None
+        for e in self.ledger.fetch("kpi.computed"):
+            if e.payload.get("id") == kpi_id:
+                entry = e.payload
+        return entry
+
     def _baseline_kpi_entry(self, kpi_id: str) -> dict | None:
         """Last accepted-normal computed entry for a KPI — ignores prior
         drift-flagged readings so a one-off anomaly never becomes the new
@@ -158,12 +166,26 @@ class DataOpsMemoryAgent:
                                {"id": kdef["id"], "agg": kdef["agg"],
                                 "column": kdef["column"]}, ts=ts)
             base_entry = self._baseline_kpi_entry(res["id"])
+            prev_entry = self._last_kpi_entry(res["id"])
             baseline = base_entry["value"] if base_entry else None
             is_drift = False
             if baseline is not None and baseline != 0:
                 rel = abs(res["value"] - baseline) / abs(baseline)
                 if rel > drift_threshold:
-                    is_drift = True
+                    # A *sustained* shift becomes the new normal: if the previous
+                    # reading already drifted the same way and we've stabilized
+                    # near it, accept it (re-baseline) rather than flag forever.
+                    # A one-off spike doesn't stabilize, so it still anchors to the
+                    # last accepted value.
+                    confirmed_shift = False
+                    if prev_entry and prev_entry.get("drift") and prev_entry["value"]:
+                        same_dir = ((res["value"] - baseline)
+                                    * (prev_entry["value"] - baseline) > 0)
+                        stabilized = (abs(res["value"] - prev_entry["value"])
+                                      / abs(prev_entry["value"]) <= drift_threshold)
+                        confirmed_shift = same_dir and stabilized
+                    is_drift = not confirmed_shift
+                if is_drift:
                     self.ledger.append(
                         "kpi.drift_flagged",
                         {"id": res["id"], "baseline": baseline, "new": res["value"],

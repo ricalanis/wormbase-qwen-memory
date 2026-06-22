@@ -142,6 +142,21 @@
   exceptions, chain-broken message renders. Replaced deprecated
   `use_container_width=True` → `width="stretch"` (9×) to clear console warnings.
 
+## 2026-06-21 — animated 12-week simulation + drift re-baselining
+- `simulate.py`: deterministic 12-week run — gentle uptrend (no false drift),
+  plan authored once then reused free, two planted events: whale (wk6, drift up)
+  and churn (wk10, drift down). Replays byte-for-byte.
+- Drift logic upgrade: a *sustained* shift is now accepted as the new normal
+  (re-baseline) while a *transient* spike still anchors to the last accepted
+  value. Fixed weeks 11–12 flagging forever after the churn. New helper
+  `_last_kpi_entry`; test `test_transient_spike_vs_sustained_shift`.
+- UI rebuilt around an **animated simulation window**: ▶ Play / ⏭ Step / ↺ Reset
+  + speed slider; growing revenue chart with drift markers; live trust strip +
+  cost; per-week event ticker with inline drift explanation; progress bar. Detail
+  sections (waterfall, receipts, prove-it, replay) below reflect current state.
+  Agent runs with high staleness so weekly cadence doesn't decay-reauthor.
+- Validated via AppTest (12 steps + tamper, zero exceptions) + live boot. 38 tests.
+
 ### Next
 - Extend ops: forecast / regression / cohort_retention / what_if (modelling tier).
 - LLM narration (Qwen-Plus) gated by `is_grounded`; full `compose_report`.
