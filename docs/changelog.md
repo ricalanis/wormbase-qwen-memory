@@ -168,6 +168,15 @@
   provenance evolving. Per-week telemetry captured in run_next (`_estimate_cost_units`
   for the no-memory baseline). Validated via AppTest + live boot. 38 tests green.
 
+## 2026-06-21 — make the output metric + query obvious (use-case card)
+- Reshaped the sim window's top into a Question→Query→Output card: Maya's
+  recurring question ("How did we do last week — and what changed?"), the exact
+  query the agent runs (`total_amount = SUM(amount)` over the cleaning steps,
+  badged 🧠 authored / ♻️ reused·0 tokens), and the **OUTPUT METRIC** (weekly
+  revenue, big, with ±% vs last week + inline drift explanation). Folded the
+  separate query panel into this card. Validated at the whale week via AppTest
+  ($949, +57% vs last week, query + explanation all shown). 38 tests green.
+
 ### Next
 - Extend ops: forecast / regression / cohort_retention / what_if (modelling tier).
 - LLM narration (Qwen-Plus) gated by `is_grounded`; full `compose_report`.

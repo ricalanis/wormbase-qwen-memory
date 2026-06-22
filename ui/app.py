@@ -156,24 +156,42 @@ def render_window(container) -> None:
                   delta="reused — free" if (last_rep and last_rep.reused) else None)
         c4.metric("Planner", planner_client.model if planner_client else "rules (offline)")
 
-        # current week + event
+        # --- use-case card: the QUESTION, the QUERY, the OUTPUT METRIC -------
         if reports:
             wk, rep = reports[-1]
-            week_no = wk["week"]
             rev = rep.kpis.get("total_amount")
-            tag = "reused (free)" if rep.reused else f"authored · {rep.planner_cost_units} units"
-            st.markdown(f'<div class="hero">{wk["name"]}: {_money(rev)} '
-                        f'<span style="font-size:15px;color:#8B98A9">· {tag}</span></div>',
-                        unsafe_allow_html=True)
-            if rep.explanations:
-                st.markdown(f'<div class="drift">⚠ {rep.explanations[0]}</div>',
+            prev = hist[-2]["value"] if len(hist) >= 2 else None
+            wow = (rev - prev) / prev if prev else None
+            authored = agent.ledger.fetch("plan.authored")
+            active = authored[-1].payload if authored else {"ops": [], "dataset": "—"}
+            kpis = [o for o in active["ops"] if o.get("op") == "define_kpi"]
+            main = next((k for k in kpis if k["id"] == "total_amount"),
+                        kpis[0] if kpis else None)
+            metric_q = (f"{main['id']} = {main['agg'].upper()}({main['column']})"
+                        if main else "—")
+            cleaning = [_fmt_op(o) for o in active["ops"] if o.get("op") != "define_kpi"]
+            prov = ("🧠 authored this week · " + rep.plan_backend) if not rep.reused \
+                else f"♻️ reused from {active['dataset']} · 0 tokens"
+
+            qcol, acol = st.columns([3, 2])
+            with qcol:
+                st.markdown("🗓️ **Maya asks every Monday:** "
+                            "*“How did we do last week — and what changed?”*")
+                st.markdown(f"**The query the agent runs** &nbsp;"
+                            f"<span style='color:#8B98A9'>· {prov}</span>",
                             unsafe_allow_html=True)
-            elif wk["event"]:
-                st.markdown(f'<div class="event">{wk["event"]}</div>',
-                            unsafe_allow_html=True)
-            else:
-                st.markdown(f'<div class="event">stable — plan reused, no surprises</div>',
-                            unsafe_allow_html=True)
+                st.code(f"{metric_q}\n  over orders cleaned by: "
+                        + " · ".join(cleaning[:3]) + (" · …" if len(cleaning) > 3 else ""),
+                        language=None)
+            with acol:
+                st.metric("➜ OUTPUT METRIC · weekly revenue", _money(rev),
+                          delta=(f"{wow:+.0%} vs last week" if wow is not None else None))
+                if rep.explanations:
+                    st.markdown(f'<div class="drift">⚠ {rep.explanations[0]}</div>',
+                                unsafe_allow_html=True)
+                elif wk["event"]:
+                    st.markdown(f'<div class="event">{wk["event"]}</div>',
+                                unsafe_allow_html=True)
         else:
             st.info("Press **▶ Play simulation** (or **⏭ Step a week**) to begin.")
 
@@ -219,17 +237,6 @@ def render_window(container) -> None:
             pct = saved / cum_naive[-1] if cum_naive[-1] else 0
             gright.caption(f"**{cum_actual[-1]:,} tokens** used vs **{cum_naive[-1]:,}** "
                            f"if it re-planned every week — **{pct:.0%} saved** by reuse.")
-
-        # evolution of the query: the plan the agent is running this week
-        authored = agent.ledger.fetch("plan.authored")
-        if authored and tel:
-            active = authored[-1].payload
-            last = tel[-1]
-            src = ("🧠 authored this week by " + last["backend"]) if not last["reused"] \
-                else f"♻️ reused from {active['dataset']} (0 tokens)"
-            ops_txt = "\n".join("• " + _fmt_op(op) for op in active["ops"])
-            st.markdown(f"**The query the agent is running**  ·  {src}")
-            st.code(ops_txt, language=None)
 
         st.progress(st.session_state.step / NWEEKS,
                     text=f"week {st.session_state.step} / {NWEEKS}")
