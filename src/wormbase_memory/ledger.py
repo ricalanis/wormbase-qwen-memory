@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+import threading
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -51,7 +52,11 @@ class Ledger:
 
     def __init__(self, db_path: str | Path = ":memory:") -> None:
         self.db_path = str(db_path)
-        self._conn = sqlite3.connect(self.db_path)
+        # check_same_thread=False: Streamlit runs each rerun on a new thread and
+        # reuses one connection from session_state. A lock serializes writes so
+        # seq/hash-chain stays consistent without the per-thread guard.
+        self._conn = sqlite3.connect(self.db_path, check_same_thread=False)
+        self._lock = threading.Lock()
         self._conn.execute("PRAGMA journal_mode=WAL;")
         self._init_schema()
 
@@ -85,35 +90,36 @@ class Ledger:
         self, kind: str, payload: dict[str, Any], ts: datetime | None = None
     ) -> Entry:
         """Append one entry, chaining it to the current head."""
-        last_seq, prev_hash = self._head()
-        seq = last_seq + 1
         ts = ts or datetime.now(UTC)
         if ts.tzinfo is None:
             ts = ts.replace(tzinfo=UTC)
         entry_id = str(uuid4())
-        body = {
-            "entry_id": entry_id,
-            "seq": seq,
-            "ts": ts,
-            "kind": kind,
-            "payload": payload,
-            "prev_hash": prev_hash,
-        }
-        h = compute_entry_hash(body)
-        self._conn.execute(
-            "INSERT INTO ledger (seq, entry_id, ts, kind, payload, prev_hash, hash) "
-            "VALUES (?,?,?,?,?,?,?)",
-            (
-                seq,
-                entry_id,
-                ts.isoformat(),
-                kind,
-                json.dumps(payload, sort_keys=True, separators=(",", ":")),
-                prev_hash.hex(),
-                h.hex(),
-            ),
-        )
-        self._conn.commit()
+        with self._lock:  # serialize read-head -> insert so seq/chain stay consistent
+            last_seq, prev_hash = self._head()
+            seq = last_seq + 1
+            body = {
+                "entry_id": entry_id,
+                "seq": seq,
+                "ts": ts,
+                "kind": kind,
+                "payload": payload,
+                "prev_hash": prev_hash,
+            }
+            h = compute_entry_hash(body)
+            self._conn.execute(
+                "INSERT INTO ledger (seq, entry_id, ts, kind, payload, prev_hash, hash) "
+                "VALUES (?,?,?,?,?,?,?)",
+                (
+                    seq,
+                    entry_id,
+                    ts.isoformat(),
+                    kind,
+                    json.dumps(payload, sort_keys=True, separators=(",", ":")),
+                    prev_hash.hex(),
+                    h.hex(),
+                ),
+            )
+            self._conn.commit()
         return Entry(entry_id, seq, ts, kind, payload, prev_hash, h)
 
     def write_pevr(

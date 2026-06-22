@@ -130,6 +130,18 @@
 - Verified from the parent dir: make demo/test/setup all green; MCP server builds
   with fastmcp; 35 tests pass post-`uv sync`.
 
+## 2026-06-21 — fix SQLite thread errors in the Streamlit demo
+- Root cause: Streamlit runs each rerun on a NEW thread, but the ledger
+  connection lives in session_state → "SQLite objects created in a thread can
+  only be used in that same thread" on every interaction.
+- Fix: `sqlite3.connect(..., check_same_thread=False)` + a `threading.Lock`
+  serializing `append` (read-head→insert) so seq/hash-chain stay consistent under
+  concurrent writes. Added `tests/test_ledger_threads.py` (cross-thread + 40
+  concurrent appends → monotonic seq, chain verifies). 37 tests green.
+- Drove the live app via Streamlit AppTest: Run Week ×3 + Tamper → zero
+  exceptions, chain-broken message renders. Replaced deprecated
+  `use_container_width=True` → `width="stretch"` (9×) to clear console warnings.
+
 ### Next
 - Extend ops: forecast / regression / cohort_retention / what_if (modelling tier).
 - LLM narration (Qwen-Plus) gated by `is_grounded`; full `compose_report`.

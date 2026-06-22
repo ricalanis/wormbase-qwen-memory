@@ -129,10 +129,10 @@ c4.metric("Planner", planner_client.model if planner_client else "rules (offline
 b1, b2, _ = st.columns([1, 1, 2])
 if st.session_state.step < NWEEKS:
     b1.button(f"▶ Run Week {st.session_state.step + 1}", type="primary",
-              on_click=run_next, use_container_width=True)
+              on_click=run_next, width="stretch")
 else:
-    b1.button("✓ All weeks run", disabled=True, use_container_width=True)
-b2.button("↺ Reset demo", on_click=reset, use_container_width=True)
+    b1.button("✓ All weeks run", disabled=True, width="stretch")
+b2.button("↺ Reset demo", on_click=reset, width="stretch")
 
 st.divider()
 
@@ -151,7 +151,7 @@ if hist:
     fig.update_layout(height=300, paper_bgcolor="#0B0F14", plot_bgcolor="#0B0F14",
                       font_color="#E6EDF3", margin=dict(t=10, b=10),
                       yaxis=dict(gridcolor="#1A2230"), xaxis=dict(gridcolor="#1A2230"))
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
 else:
     st.caption("Run a week to plot revenue.")
 
@@ -178,7 +178,7 @@ if expl_entries and ins_entries:
     wf.update_layout(height=320, paper_bgcolor="#0B0F14", plot_bgcolor="#0B0F14",
                      font_color="#E6EDF3", showlegend=False, margin=dict(t=20),
                      yaxis=dict(gridcolor="#1A2230"))
-    st.plotly_chart(wf, use_container_width=True)
+    st.plotly_chart(wf, width="stretch")
     st.caption(f"Σ drivers = {ex['total_change']:+,.0f} = "
                f"({ins['new']:,.0f} − {ins['baseline']:,.0f}). Attribution is exact.")
 
@@ -207,7 +207,7 @@ if st.session_state.reports:
     last = st.session_state.reports[-1][1]
     e1.metric("Planner cost this week", last.planner_cost_units,
               delta="reused — free" if last.reused else "authored")
-    e2.dataframe(pd.DataFrame(rows), hide_index=True, use_container_width=True)
+    e2.dataframe(pd.DataFrame(rows), hide_index=True, width="stretch")
 
 # --- §D Prove it, then break it (the WOW) -------------------------------------
 if hist:
@@ -215,8 +215,8 @@ if hist:
     st.markdown("### Prove it, then break it")
     d1, d2 = st.columns(2)
     d1.button("🔨 Tamper with the record", on_click=tamper,
-              use_container_width=True, disabled=st.session_state.tampered)
-    d2.button("↺ Restore", on_click=reset, use_container_width=True)
+              width="stretch", disabled=st.session_state.tampered)
+    d2.button("↺ Restore", on_click=reset, width="stretch")
     if not ok:
         st.markdown('<div class="drift">One value was changed — the chain caught it '
                     f'at entry {broken}. You can’t quietly rewrite the past.</div>',
@@ -255,4 +255,4 @@ with st.expander("The ledger (every event, hash-chained)"):
     trace = [{"seq": e.seq, "ts": e.ts.isoformat()[:19], "kind": e.kind,
               "hash": e.hash.hex()[:12], "payload": str(e.payload)[:80]}
              for e in agent.ledger.fetch()]
-    st.dataframe(pd.DataFrame(trace), hide_index=True, use_container_width=True)
+    st.dataframe(pd.DataFrame(trace), hide_index=True, width="stretch")
