@@ -177,6 +177,18 @@
   separate query panel into this card. Validated at the whale week via AppTest
   ($949, +57% vs last week, query + explanation all shown). 38 tests green.
 
+## 2026-06-21 — consistency framing: varied questions + governance section
+- Each sim week now shows a DIFFERENT asker + phrasing (Maya/Founder/Board/
+  Investor/Finance) — "How did we do?", "What's revenue looking like?", "Confirm
+  last week's top-line." — all resolving to the SAME governed query
+  (`total_amount = SUM(amount)`). Exemplifies phrasing-independent consistency.
+  Card caption: "Different people, different words — one governed query."
+- Added a **data-governance section** to the UI (one governed definition,
+  comparability over time, reproducibility, auditability, tamper-evidence,
+  surfaced-not-hidden change) + `docs/governance.md` + README pointer.
+- AppTest-verified distinct questions render per week; governance section present.
+  38 tests green.
+
 ### Next
 - Extend ops: forecast / regression / cohort_retention / what_if (modelling tier).
 - LLM narration (Qwen-Plus) gated by `is_grounded`; full `compose_report`.

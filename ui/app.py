@@ -175,14 +175,15 @@ def render_window(container) -> None:
 
             qcol, acol = st.columns([3, 2])
             with qcol:
-                st.markdown("🗓️ **Maya asks every Monday:** "
-                            "*“How did we do last week — and what changed?”*")
-                st.markdown(f"**The query the agent runs** &nbsp;"
+                st.markdown(f"🗣️ **{wk['asker']} asks:** *“{wk['question']}”*")
+                st.markdown(f"**Resolves to the same governed query** &nbsp;"
                             f"<span style='color:#8B98A9'>· {prov}</span>",
                             unsafe_allow_html=True)
                 st.code(f"{metric_q}\n  over orders cleaned by: "
                         + " · ".join(cleaning[:3]) + (" · …" if len(cleaning) > 3 else ""),
                         language=None)
+                st.caption("Different people, different words — **one** governed query, "
+                           "so the number stays comparable week over week.")
             with acol:
                 st.metric("➜ OUTPUT METRIC · weekly revenue", _money(rev),
                           delta=(f"{wow:+.0%} vs last week" if wow is not None else None))
@@ -256,6 +257,30 @@ if st.session_state.playing:
     st.rerun()
 else:
     render_window(window)
+
+# --- why this matters: data governance & consistency over time ----------------
+st.divider()
+with st.container(border=True):
+    st.markdown("### 🏛️ Why this matters — data governance & consistency over time")
+    st.markdown(
+        "Notice the question changes every week — different people, different "
+        "wording — but the agent answers from **one governed query**, not a fresh "
+        "ad-hoc interpretation. That is the whole point:\n\n"
+        "- **One governed definition of the metric.** *Revenue* = `SUM(amount)` over "
+        "canonicalized, de-duplicated orders — defined once, stored in the ledger, "
+        "and reused. No analyst silently re-derives it a little differently each week.\n"
+        "- **Phrasing-independent → comparable over time.** However it's asked, it "
+        "maps to the same query, so week-over-week numbers are truly comparable "
+        "(no semantic drift from who happened to run the report).\n"
+        "- **Reproducible & auditable.** Same inputs → identical `value_hash`, "
+        "byte-for-byte; every figure traces to a ledger receipt; replay the state "
+        "as of any past week.\n"
+        "- **Tamper-evident.** The hash chain catches any silent edit to history — "
+        "you can take the number to a board meeting and prove it wasn't changed.\n"
+        "- **Real change is surfaced, not hidden.** Genuine moves are flagged and "
+        "attributed (whale, churn); noise and rephrasing never move the number.\n\n"
+        "_The governance payoff: a single, versioned, auditable source of metric "
+        "truth — so analysis stays consistent and defensible over time._")
 
 # --- detail sections (current state) -----------------------------------------
 st.divider()

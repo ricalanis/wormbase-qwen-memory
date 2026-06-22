@@ -156,6 +156,12 @@ folds from. The hash-chain semantics here are a clean-room port of WormBase's
 ledger. The cleaning-plan pattern is inspired by
 [`scrubdata-qwen3-4b`](https://huggingface.co/ricalanis/scrubdata-qwen3-4b).
 
+## Data governance & consistency
+
+The demo varies *who asks* and *how* each week, but the agent answers from **one
+governed query** — so numbers stay comparable, reproducible, and auditable over
+time. Why that's the real value: [`docs/governance.md`](docs/governance.md).
+
 ## License
 
 Apache-2.0 — see [LICENSE](LICENSE).

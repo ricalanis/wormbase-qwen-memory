@@ -13,6 +13,23 @@ from datetime import UTC, datetime, timedelta
 import pandas as pd
 
 COLS = ["region", "product", "amount"]
+# Same intent, different askers + phrasings each week. The point: however the
+# question arrives, it resolves to ONE governed query — so the number stays
+# comparable over time (consistency), instead of each ad-hoc ask re-deriving it.
+QUESTIONS = [
+    ("Maya · Ops", "How did we do last week?"),
+    ("Founder", "What's revenue looking like?"),
+    ("Board deck", "Give me the weekly revenue number."),
+    ("Maya · Ops", "Any change in sales vs the prior week?"),
+    ("Investor update", "What were total sales last week?"),
+    ("Founder", "Did revenue move — and why?"),
+    ("Maya · Ops", "Where did we land this week?"),
+    ("Finance", "Confirm last week's top-line."),
+    ("Board deck", "Weekly revenue, please."),
+    ("Founder", "Sales okay this week? Anything off?"),
+    ("Investor update", "Latest weekly revenue figure?"),
+    ("Maya · Ops", "How's the number trending?"),
+]
 BASE = [("North", "Widget", 100), ("South", "Gadget", 200),
         ("East", "Widget", 150), ("West", "Gadget", 120)]
 # tiny deterministic week-to-week wiggle (well under the 15% drift threshold)
@@ -49,7 +66,9 @@ def simulate_weeks(n: int = 12) -> list[dict]:
             event = "🐳 new whale customer (East)"
         if w == 10:
             event = "📉 lost the South account"
+        asker, question = QUESTIONS[(w - 1) % len(QUESTIONS)]
         weeks.append({"week": w, "name": f"Week {w}",
                       "df": pd.DataFrame(rows, columns=COLS),
-                      "ts": t0 + timedelta(days=7 * (w - 1)), "event": event})
+                      "ts": t0 + timedelta(days=7 * (w - 1)), "event": event,
+                      "asker": asker, "question": question})
     return weeks
