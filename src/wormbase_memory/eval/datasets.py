@@ -64,6 +64,23 @@ def make_noisy_run(n_sessions: int = 8, drift_at: tuple[int, ...] = (5,)) -> lis
     return sessions
 
 
+def make_schema_drift_run(n_sessions: int = 9) -> list[Session]:
+    """Sessions whose *column set* varies (every 3rd week adds a cosmetic 'note'
+    column) → non-exact recall, so the cascade's reuse-threshold actually gates.
+    Used to tune the escalation threshold. No KPI drift (is_drift=False)."""
+    sessions: list[Session] = []
+    sales = [("North", "Widget", 100), ("South", "Gadget", 200), ("West", "Gadget", 150)]
+    for i in range(1, n_sessions + 1):
+        rows = _messy(sales, dirt=2 if i == 1 else 1)
+        if i % 3 == 0:  # gray-zone: extra column shifts the schema fingerprint
+            df = pd.DataFrame([(r[0], r[1], r[2], "vip") for r in rows],
+                              columns=COLS + ["note"])
+        else:
+            df = pd.DataFrame(rows, columns=COLS)
+        sessions.append(Session(name=f"s{i}", df=df, is_drift=False))
+    return sessions
+
+
 def make_run(n_sessions: int = 6, drift_at: tuple[int, ...] = (4,)) -> list[Session]:
     """n_sessions, with drift injected at the given 1-based session indices."""
     sessions: list[Session] = []

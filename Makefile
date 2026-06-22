@@ -38,6 +38,12 @@ prove:
 curve:
 	$(UV) --extra viz python scripts/plot_curve.py
 
+reliability:
+	$(UV) --extra viz python scripts/plot_reliability.py
+
+tune-escalation:
+	$(UV) python scripts/tune_escalation.py
+
 triage:
 	WBM_USE_LOCAL_QWEN=1 $(UV) python scripts/triage_demo.py
 

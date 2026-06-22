@@ -106,7 +106,8 @@ class DataOpsMemoryAgent:
                                     reason=f"stale ({age_days}d > {self.staleness_days}d)",
                                     ts=ts)
                 candidate = None  # force re-author
-        decision = self.triage.decide(prof, candidate)
+        decision = self.triage.decide(prof, candidate,
+                                      reuse_threshold=prefs.get("reuse_threshold"))
 
         # verifier-gate: only reuse a plan that still verifiably works on this data
         do_reuse = decision.reuse and candidate is not None

@@ -208,6 +208,20 @@
   0 false-rejects across the 12-week sim (11/12 weeks still reuse — token story
   intact). 43 tests green (+5).
 
+## 2026-06-22 — loop-engineering evals #1 (reliability) + #5 (escalation tuning)
+- **#1 `eval/reliability.py`** + `scripts/plot_reliability.py` (`make reliability`):
+  decision-reliability vs horizon, memory-ON vs OFF. ON holds accuracy 1.0 at flat
+  cost across horizons 3→12; OFF decays 1.0→0.75 while cost balloons 543→2151;
+  pass^k=1.0 (deterministic governance). The "governed memory doesn't decay" claim,
+  quantified + plotted.
+- **#5 `eval/escalation.py`** + `scripts/tune_escalation.py` (`make tune-escalation`):
+  reuse threshold made tunable (triage param + `reuse_threshold` preference);
+  sweep shows lowering 0.9→0.5 cuts tokens 380→177 (~53%) with full correctness
+  preserved — safe because the verifier-gate (#2) rejects stale reuse. `tune()`
+  persists the success@cost-optimal threshold (PEVR + policy.tuned). New gray-zone
+  dataset `make_schema_drift_run`.
+- 47 tests green (+4). Backlog #1 and #5 marked ✅.
+
 ### Next
 - Extend ops: forecast / regression / cohort_retention / what_if (modelling tier).
 - LLM narration (Qwen-Plus) gated by `is_grounded`; full `compose_report`.

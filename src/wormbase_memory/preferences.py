@@ -16,6 +16,7 @@ from .ledger import Ledger
 DEFAULTS: dict[str, Any] = {
     "drift_threshold": 0.15,
     "narrative_style": "verbose",  # "verbose" | "terse"
+    "reuse_threshold": 0.9,        # cascade: min similarity to reuse in the gray zone
 }
 
 

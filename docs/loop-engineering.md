@@ -69,11 +69,11 @@ engineering *validates the architecture* and gives the backlog + eval below.
 5. **Hygiene** — fixed seeds, CIs over repeats, frozen versioned eval set, dev/holdout split.
 
 ## Prioritized backlog (order: instrument → consistency gates → token cutters)
-1. **Reliability-curve instrumentation** by task length/horizon (enabler). `proof: Decay Curve per release`
+1. **Reliability-curve instrumentation** by task length/horizon (enabler). `proof: Decay Curve per release` ✅ **IMPLEMENTED** (`eval/reliability.py`, `scripts/plot_reliability.py`): memory-ON holds decision-accuracy 1.0 at flat cost across horizons 3→12; memory-OFF decays 1.0→0.75 with cost ballooning 543→2151; pass^k=1.0.
 2. **Deterministic verifier gate on plan reuse** — reuse only if the stored plan still passes a cheap rule-check. `C:++ T:+ proof: regression rate ↓, reuse-success ↑` ✅ **IMPLEMENTED** (`reuse_guard.py`): column presence + executor-applies + residual case/whitespace variant collision + KPI computability; on fail → `plan.reuse_rejected` + tombstone + re-author. Prevents the stale-canonicalize regression (450 vs wrong 600); 0 false-rejects across the 12-week sim.
 3. **Marginal-value early-stop in PEVR** — stop when verify-pass Δ/iter ≤ threshold. `C:0/+ T:++ proof: iters ↓, acc flat`
 4. **Staleness check before reuse** (we have decay governance) — re-verify past-TTL plans. `C:++ T:− proof: aged-memory regression ↓`
-5. **Escalation threshold tuning** on the cascade. `C:+ T:++ proof: escalation precision ↑, success@cost ↑`
+5. **Escalation threshold tuning** on the cascade. `C:+ T:++ proof: escalation precision ↑, success@cost ↑` ✅ **IMPLEMENTED** (`eval/escalation.py`, `scripts/tune_escalation.py`): sweeps the reuse-similarity threshold; lowering 0.9→0.5 cuts tokens 380→177 (~53%) with full correctness (chain ✓, repro 1.0, 0 rejects) — safe *because* the verifier-gate (#2) guards stale reuse. `tune()` persists the success@cost-optimal threshold as a preference (policy.tuned).
 6. **Small CoT verifier instead of full re-solve** as the catch-gate (ThinkPRM). `C:+ T:++ proof: verify-cost-per-error-caught ↓`
 7. **consistency@k vote only on low-confidence queries** (not blanket sampling). `C:++ T:+ proof: consistency@k ↑ at small token delta`
 

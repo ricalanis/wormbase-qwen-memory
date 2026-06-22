@@ -49,7 +49,9 @@ class Triage:
         # duck-typed: needs .available and .chat(messages, **kw) -> ChatResult
         self.local = local_client if local_client is not None else LocalQwenClient()
 
-    def decide(self, profile: dict[str, Any], candidate: Match | None) -> Decision:
+    def decide(self, profile: dict[str, Any], candidate: Match | None,
+               reuse_threshold: float | None = None) -> Decision:
+        thr = DETERMINISTIC_REUSE_THRESHOLD if reuse_threshold is None else reuse_threshold
         if candidate is None:
             return Decision(False, 0.0, "none", 0, "no prior plan to reuse", None)
         if candidate.similarity >= 1.0:
@@ -61,11 +63,10 @@ class Triage:
                 return self._decide_with_local(profile, candidate)
             except Exception:
                 pass  # fall through to deterministic rule
-        reuse = candidate.similarity >= DETERMINISTIC_REUSE_THRESHOLD
+        reuse = candidate.similarity >= thr
         op = ">=" if reuse else "<"
         return Decision(reuse, candidate.similarity, "rules", 0,
-                        f"similarity {candidate.similarity:.2f} {op} "
-                        f"{DETERMINISTIC_REUSE_THRESHOLD}", candidate)
+                        f"similarity {candidate.similarity:.2f} {op} {thr}", candidate)
 
     def _decide_with_local(self, profile: dict[str, Any], candidate: Match) -> Decision:
         user = (
