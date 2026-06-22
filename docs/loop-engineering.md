@@ -70,7 +70,7 @@ engineering *validates the architecture* and gives the backlog + eval below.
 
 ## Prioritized backlog (order: instrument → consistency gates → token cutters)
 1. **Reliability-curve instrumentation** by task length/horizon (enabler). `proof: Decay Curve per release`
-2. **Deterministic verifier gate on plan reuse** — reuse only if the stored plan still passes a cheap rule-check. `C:++ T:+ proof: regression rate ↓, reuse-success ↑`
+2. **Deterministic verifier gate on plan reuse** — reuse only if the stored plan still passes a cheap rule-check. `C:++ T:+ proof: regression rate ↓, reuse-success ↑` ✅ **IMPLEMENTED** (`reuse_guard.py`): column presence + executor-applies + residual case/whitespace variant collision + KPI computability; on fail → `plan.reuse_rejected` + tombstone + re-author. Prevents the stale-canonicalize regression (450 vs wrong 600); 0 false-rejects across the 12-week sim.
 3. **Marginal-value early-stop in PEVR** — stop when verify-pass Δ/iter ≤ threshold. `C:0/+ T:++ proof: iters ↓, acc flat`
 4. **Staleness check before reuse** (we have decay governance) — re-verify past-TTL plans. `C:++ T:− proof: aged-memory regression ↓`
 5. **Escalation threshold tuning** on the cascade. `C:+ T:++ proof: escalation precision ↑, success@cost ↑`

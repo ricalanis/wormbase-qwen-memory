@@ -17,7 +17,7 @@ from typing import Any
 
 import pandas as pd
 
-from . import analysis, executor, narrative, preferences, profiler, recall
+from . import analysis, executor, narrative, preferences, profiler, recall, reuse_guard
 from .ledger import Ledger
 from .planner import Planner
 from .triage import Triage
@@ -39,6 +39,7 @@ class SessionReport:
     kpis: dict[str, float] = field(default_factory=dict)
     drift: list[str] = field(default_factory=list)
     explanations: list[str] = field(default_factory=list)
+    reuse_rejected: bool = False
     verified: bool = True
 
 
@@ -106,15 +107,33 @@ class DataOpsMemoryAgent:
                                     ts=ts)
                 candidate = None  # force re-author
         decision = self.triage.decide(prof, candidate)
+
+        # verifier-gate: only reuse a plan that still verifiably works on this data
+        do_reuse = decision.reuse and candidate is not None
+        reuse_rejected = False
+        if do_reuse:
+            ok, why = reuse_guard.check(df, candidate.ops)
+            if not ok:
+                do_reuse = False
+                reuse_rejected = True
+                self.ledger.append(
+                    "plan.reuse_rejected",
+                    {"plan_id": candidate.plan_id, "reason": why, "dataset": dataset},
+                    ts=ts)
+                # the plan is stale for this data -> tombstone it (timely forgetting)
+                self.deprecate_plan(candidate.plan_id,
+                                    reason=f"reuse verification failed: {why}", ts=ts)
+
         self.ledger.append(
             "triage.decided",
             {"decision": "reuse" if decision.reuse else "escalate",
              "similarity": round(decision.similarity, 4),
              "backend": decision.backend, "tokens": decision.tokens,
-             "reason": decision.reason, "dataset": dataset},
+             "reason": decision.reason, "gate": "rejected" if reuse_rejected else "ok",
+             "dataset": dataset},
             ts=ts,
         )
-        if decision.reuse and candidate is not None:
+        if do_reuse:
             ops = candidate.ops
             backend, cost = "reused", 0
             self.ledger.append(
@@ -155,6 +174,7 @@ class DataOpsMemoryAgent:
             dataset=dataset, reused=reused, plan_backend=backend,
             planner_cost_units=cost, rows_in=len(df), rows_out=len(cleaned_df),
             triage_backend=decision.backend, triage_tokens=decision.tokens,
+            reuse_rejected=reuse_rejected,
         )
 
         # --- compute KPIs -> on drift, EXPLAIN the move + narrate -----------

@@ -197,6 +197,17 @@
   guesswork." Added a governance soundbite. Compressed attribution into the drift
   beat to hold 3:00.
 
+## 2026-06-22 — verifier-gate on plan reuse (loop-engineering backlog #2)
+- `reuse_guard.py`: before reusing a stored plan, a deterministic (LLM-free) check
+  — referenced columns present, executor applies + non-empty, **no residual
+  case/whitespace variant collisions** (stale-canonicalization detector), KPI
+  computable. On fail: `plan.reuse_rejected` + tombstone the stale plan +
+  re-author (escalate). Wired into `agent.ingest` between triage and the reuse
+  branch; `SessionReport.reuse_rejected`; `triage.decided` records `gate` outcome.
+- Proof: prevents the stale-canonicalize regression (correct 450 vs wrong 600);
+  0 false-rejects across the 12-week sim (11/12 weeks still reuse — token story
+  intact). 43 tests green (+5).
+
 ### Next
 - Extend ops: forecast / regression / cohort_retention / what_if (modelling tier).
 - LLM narration (Qwen-Plus) gated by `is_grounded`; full `compose_report`.
